@@ -13,6 +13,10 @@ extern sqlite3 *db_global_database;
 #define sys_db_crash(db, error_desc) \
     sys_crash(CRASH_SOURCE_DB, "%s, with SQL error: %s", (error_desc), sqlite3_errmsg(db))
 
+// Try to open database file on global connection
 void db_init_global(const char *db_file_path);
+
+// Create database schema
+void dbd_init_schema(sqlite3 *db);
 
 #endif

@@ -11,6 +11,8 @@ int main(void) {
     debug_init();
     db_init_global("deep_messenger.db");
 
+    dbd_init_schema(db_global_database);
+
     debug("Something");
 
     //sys_crash("main", "something %d :)", 11, 0, 11);
