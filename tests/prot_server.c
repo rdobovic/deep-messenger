@@ -28,7 +28,6 @@ void connect_cb(struct evconnlistener *listener, evutil_socket_t sock,
 }
 
 int main() {
-
     struct event_base *base;
     struct evconnlistener *listener;
     struct sockaddr_in sin;

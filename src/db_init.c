@@ -2,17 +2,17 @@
 #include <db_init.h>
 #include <stdlib.h>
 
-sqlite3 *db_global_database = NULL;
+sqlite3 *dbg = NULL;
 
 // Try to open database file on global connection
 void db_init_global(const char *db_file_path) {
-    if (sqlite3_open(db_file_path, &db_global_database)) {
-        sys_db_crash(db_global_database, "Unable to start database engine");
+    if (sqlite3_open(db_file_path, &dbg)) {
+        sys_db_crash(dbg, "Unable to start database engine");
     }
 }
 
 // Create database schema
-void dbd_init_schema(sqlite3 *db) {
+void db_init_schema(sqlite3 *db) {
 
     const char sql[] = 
         "CREATE TABLE IF NOT EXISTS options ("

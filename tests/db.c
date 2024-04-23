@@ -11,7 +11,7 @@ int main(void) {
     debug_init();
     db_init_global("deep_messenger.db");
 
-    dbd_init_schema(db_global_database);
+    db_init_schema(dbg);
 
     debug("Something");
 
@@ -24,18 +24,18 @@ int main(void) {
 
     //printf("Option defined: %d\n", db_options_is_defined("a", DB_OPTIONS_INT));
 
-    db_options_set_int("test_int", 976);
-    db_options_set_bin("test_bin", "RNDBIN12", 8);
-    db_options_set_text("test_txt", "This is some text", -1);
+    db_options_set_int(dbg, "test_int", 976);
+    db_options_set_bin(dbg, "test_bin", "RNDBIN12", 8);
+    db_options_set_text(dbg, "test_txt", "This is some text", -1);
 
 
     
     int a;
     char b[25], c[25];
 
-    a = db_options_get_int("test_int");
-    db_options_get_bin("test_bin", b, 25);
-    db_options_get_text("test_txt", c, 25);
+    a = db_options_get_int(dbg, "test_int");
+    db_options_get_bin(dbg, "test_bin", b, 25);
+    db_options_get_text(dbg, "test_txt", c, 25);
 
     b[8] = '\0';
 
