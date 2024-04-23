@@ -177,7 +177,7 @@ void prot_main_tran_enable(struct prot_main *pmain, int yes);
 // Allocate new object for given message type and set given pointers
 // to handlers for that message, if pointers are NULL they are not set
 // function returns pointer to message object
-void * prot_handler_by_type(
+void * prot_handler_autogen(
     enum prot_message_codes code,
     struct prot_recv_handler **phand_recv,
     struct prot_tran_handler **phand_tran
