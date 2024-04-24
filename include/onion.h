@@ -12,7 +12,8 @@
 // Checks if onion domain is valid
 int onion_address_valid(const char *onion_address);
 
-// Extracts key from given onion domain on key location
-int onion_extract_key(const char *onion_address, uint8_t *key);
+// Extracts key from given onion domain to key memory location, function
+// assumes that given onion address is valid
+void onion_extract_key(const char *onion_address, uint8_t *key);
 
 #endif

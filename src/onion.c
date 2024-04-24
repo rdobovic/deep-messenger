@@ -5,20 +5,27 @@
 #include <openssl/evp.h>
 #include <debug.h>
 
+/**
+ * Functions below are used to check and decode .onion address
+ * more information on onion address encoding and checksum can be found
+ * in tor spec:
+ * 
+ * https://spec.torproject.org/rend-spec/overview.html#cryptography
+ * https://spec.torproject.org/rend-spec/encoding-onion-addresses.html
+ * 
+ */
 
 // Checks if onion domain is valid
 int onion_address_valid(const char *onion_address) {
     int i;
     size_t len;
 
-    EVP_MD *md;
     EVP_MD_CTX *mdctx;
 
     int hash_len;
     uint8_t hash[EVP_MAX_MD_SIZE];
     uint8_t onion_version = ONION_VERSION;
 
-    uint8_t *calc_checksum;
     uint8_t *pub_key, *checksum, version;
     uint8_t onion_raw[BASE32_DECODED_LEN(ONION_BASE_LEN)];
 
@@ -29,27 +36,17 @@ int onion_address_valid(const char *onion_address) {
             return 0;
     }
 
-    debug(".onion check passed !");
-
     if (!base32_valid(onion_address, ONION_BASE_LEN))
         return 0;
 
-    debug("base32 check passed !");
-
     len = base32_decode(onion_address, ONION_BASE_LEN, onion_raw);
-
-    debug("OUT LEN: %d", len);
 
     pub_key = onion_raw;
     version = onion_raw[len - 1];
     checksum = &onion_raw[len - 3];
 
-    debug("PUB: %x...%x, VER: %x, CS: %x%x", pub_key[0], pub_key[ONION_KEY_LEN - 1], version, checksum[0], checksum[1]);
-
     if (version != ONION_VERSION)
         return 0;
-
-    debug("Calculating hash");
 
     mdctx = EVP_MD_CTX_new();
 
@@ -61,15 +58,6 @@ int onion_address_valid(const char *onion_address) {
 
     EVP_MD_CTX_free(mdctx);
 
-    debug("Hash len; %d", hash_len);
-
-    debug("PK: %x%x", pub_key[ONION_KEY_LEN - 2], pub_key[ONION_KEY_LEN - 1]);
-
-    calc_checksum = &hash[hash_len - ONION_CHECKSUM_LEN];
-
-    debug("cs: %x%x = %x%x", checksum[0], checksum[1], hash[0], hash[1]);
-    debug("cs: %x%x = %x%x", checksum[0], checksum[1], calc_checksum[0], calc_checksum[1]);
-
     for (i = 0; i < ONION_CHECKSUM_LEN; i++) {
         if (hash[i] != checksum[i])
             return 0;
@@ -78,7 +66,17 @@ int onion_address_valid(const char *onion_address) {
     return 1;
 }
 
-// Extracts key from given onion domain on key location
-int onion_extract_key(const char *onion_address, uint8_t *key) {
+// Extracts key from given onion domain to key memory location, function
+// assumes that given onion address is valid
+void onion_extract_key(const char *onion_address, uint8_t *key) {
+    int i;
+    uint8_t onion_raw[BASE32_DECODED_LEN(ONION_BASE_LEN)];
 
+    base32_decode(onion_address, ONION_BASE_LEN, onion_raw);
+
+    for (i = 0; i < ONION_KEY_LEN; i++) {
+        key[i] = onion_raw[i];
+    }
+
+    return 1;
 }
