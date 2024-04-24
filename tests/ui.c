@@ -42,6 +42,7 @@ void ncurses_crash(void *attr) {
 
 int ui_init(void) {
     // Init ncurses stuff
+    debug("Running ncurses init");
     initscr();
     curs_set(0);
     noecho();
@@ -50,10 +51,13 @@ int ui_init(void) {
     start_color();
     use_default_colors();
 
+    debug("Setting crash CB");
     sys_crash_cb_add(ncurses_crash, NULL);
 
     // Create window color pairs
     ui_window_start_colors();
+
+    debug("Allocating stack and manager");
 
     stack = ui_stack_new();
 
@@ -62,11 +66,15 @@ int ui_init(void) {
 
     //ui_window_use_border(mgrwin, 1);
 
+    debug("Creating windows");
+
     chat = ui_window_new();
     info = ui_window_new();
     prompt = ui_window_new();
     contacts = ui_window_new();
     settings = ui_window_new();
+
+    debug("Attaching windows to the manager");
 
     ui_manager_add_window(mgr, info,     0);
     ui_manager_add_window(mgr, chat,     1);
@@ -74,22 +82,32 @@ int ui_init(void) {
     ui_manager_add_window(mgr, contacts, 4);
     ui_manager_add_window(mgr, settings, 3);
 
+    debug("Creating prompt");
+
     prompt_comp = ui_prompt_new();
     ui_prompt_attach(prompt_comp, prompt);
     ui_prompt_set_submit_cb(prompt_comp, prompt_submit, NULL);
 
+    debug("Creating logger");
+
     logger = ui_logger_new();
     ui_logger_attach(logger, info);
 
+    debug("Populating logger");
+
     size_t len;
     char *str;
-    FILE *fd = fopen("/home/roko/test/onion/tor.log", "r");
+    FILE *fd = fopen("/home/roko/random.txt", "r");
+
+    debug("File opened %p", fd);
 
     while (getline(&str, &len, fd) != -1) {
         wchar_t buff[512];
         mbstowcs(buff, str, 510);
         ui_logger_log(logger, buff);
     }
+
+    debug("Generating and attaching menu comp");
 
     menu_comp = ui_menu_new();
     ui_menu_add(menu_comp, 0, L"Hello world 01", print_something_menu, NULL);
@@ -103,8 +121,12 @@ int ui_init(void) {
     ui_menu_add(menu_comp, 8, L"Hello world 09", print_something_menu, NULL);
     ui_menu_attach(menu_comp, settings);
 
+    debug("Adding manager to the stack");
+
     ui_stack_push(stack, mgrwin);
     refresh();
+
+    debug("Init done");
 }
 
 int ui_define(void) {
@@ -169,8 +191,11 @@ int main(void) {
 
     setlocale(LC_ALL, "");
 
+    debug("Starting app");
+
     ui_init();
     debug("INIT PASSED");
+
     ui_define();
 
     ui_add_titiles();
