@@ -45,7 +45,7 @@ int main(void) {
     // Create new encoder context for encoding RSA pub key to DER
     OSSL_ENCODER_CTX *encctx;
 
-    if (!(encctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_PUBLIC_KEY, "DER", NULL, NULL)))
+    if (!(encctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER", NULL, NULL)))
         debug("Failed to create encoder context");
 
     // Encode data to char array
@@ -63,7 +63,7 @@ int main(void) {
     pkd_len = MAX_BUFFER - pkd_len;
     const unsigned char *pkd_ptr2 = pub_key_der;
 
-    if (!(decctx = OSSL_DECODER_CTX_new_for_pkey(&public_key, "DER", NULL, "RSA", EVP_PKEY_PUBLIC_KEY, NULL, NULL)))
+    if (!(decctx = OSSL_DECODER_CTX_new_for_pkey(&public_key, "DER", NULL, "RSA", EVP_PKEY_KEYPAIR, NULL, NULL)))
         debug("Failed to create decoder context");
 
     // Decode key from char array
