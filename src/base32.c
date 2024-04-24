@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <base32.h>
 #include <debug.h>
 
@@ -129,4 +130,21 @@ size_t base32_decode(const char *coded, size_t len, uint8_t *plain) {
     }
 
     return plain_length;
+}
+
+// Check if given string is valid base32 encoded string
+int base32_valid(const char *coded, int len) {
+    int i;
+
+    if (len == -1)
+        len = strlen(coded);
+
+    for (i = 0; i < len; i++) {
+        char ch = coded[i];
+
+        if ((ch < 'a' || ch > 'z') && (ch < '2' || ch > '9'))
+            return 0;
+    }
+    
+    return 1;
 }

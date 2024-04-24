@@ -5,6 +5,7 @@
 #include <event2/bufferevent.h>
 #include <debug.h>
 #include <string.h>
+#include <onion.h>
 
 /**
  * Internal function prototypes
@@ -57,7 +58,7 @@ void socks5_connect_onion(
     data->port = port;
 
     // Copy onion address to connect to
-    for (i = 0; i < ONION_ADDRESS_LENGTH; i++) {
+    for (i = 0; i < ONION_ADDRESS_LEN; i++) {
         data->onion_address[i] = onion_address[i];
     }
 
@@ -85,7 +86,7 @@ void socks5_read_cb(struct bufferevent *buffev, void *data) {
         uint8_t request_header[] = 
             { SOCKS5_VERSION, SOCKS5_CONNECT_CMD, 0x00, SOCKS5_ADDRESS_DOMAIN };
         // Set address length byte
-        uint8_t onion_address_len = ONION_ADDRESS_LENGTH;
+        uint8_t onion_address_len = ONION_ADDRESS_LEN;
 
         // When response arrives check if server accepted SOCKS5_AUTH_METHOD (nothing)
         // as auth method (it should since it's tor client)

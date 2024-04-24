@@ -1,10 +1,9 @@
 #ifndef _INCLUDE_PROT_SOCKS5_H_
 #define _INCLUDE_PROT_SOCKS5_H_
 
+#include <onion.h>
 #include <stdint.h>
 #include <event2/bufferevent.h>
-
-#define ONION_ADDRESS_LENGTH 62 // 56 + 1 (dot) + 5 (onion ext)
 
 // Some definitions important for SOCKS5 protocol
 // more information in RFC 1928
@@ -59,7 +58,7 @@ struct socks5_data {
     socks5_done_cb done_cb;      // Callback to call when done (or when failed)
 
     uint16_t port;                                // Port to connect to
-    uint8_t onion_address[ONION_ADDRESS_LENGTH];  // Onion address to connect to
+    uint8_t onion_address[ONION_ADDRESS_LEN];  // Onion address to connect to
 };
 
 // Connect to tor client with given onion address using socks protocol

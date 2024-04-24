@@ -1,13 +1,11 @@
 #ifndef _INCLUDE_DB_CONTACT_H_
 #define _INCLUDE_DB_CONTACT_H_
 
+#include <onion.h>
 #include <stdint.h>
 #include <sqlite3.h>
 
 #define DB_CONTACT_NICK_MAX_LEN   255   // Defined in protocol definition
-
-#define DB_CONTACT_ONION_LEN      62    // 56 + 1 + 5 (domain + dot + onion)
-#define DB_CONTACT_ONION_KEY_LEN  32
 
 #define DB_CONTACT_SIG_KEY_PUB_LEN   32
 #define DB_CONTACT_SIG_KEY_PRIV_LEN  64
@@ -28,10 +26,10 @@ struct db_contact {
     // User nickname
     char nickname[DB_CONTACT_NICK_MAX_LEN + 1];
     // Onion address string
-    char onion_address[DB_CONTACT_ONION_LEN + 1];
+    char onion_address[ONION_ADDRESS_LEN + 1];
     
     // Key extracted from onion address string
-    uint8_t onion_pub_key[DB_CONTACT_ONION_KEY_LEN];
+    uint8_t onion_pub_key[ONION_KEY_LEN];
 
     // Keys generated during friend request
     uint8_t local_sig_key_pub[DB_CONTACT_SIG_KEY_PUB_LEN];
