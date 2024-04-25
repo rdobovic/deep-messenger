@@ -1,6 +1,9 @@
 #ifndef _INCLUDE_HELPERS_H_
 #define _INCLUDE_HELPERS_H_
 
+// Return smaller number
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+
 // Draw box (border) on the window using and apply given
 // attributes to the border
 #define box_attr(win, attr) \

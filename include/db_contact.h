@@ -42,4 +42,23 @@ struct db_contact {
     uint8_t remote_enc_key_pub[DB_CONTACT_ENC_KEY_PUB_LEN];
 };
 
+// Create new empty contact object
+struct db_contact * db_contact_new(void);
+
+// Free memory for given contact, if you want to save changes
+// you must first do so using save function
+void db_contact_free(struct db_contact *cont);
+
+// Save given contact to database
+int db_contact_save(sqlite3 *db, struct db_contact *cont);
+
+// They return NULL when not found
+
+// Get contact by their local ID
+struct db_contact * db_contact_get_by_pk(sqlite3 *db, int id);
+// Get contact by ther onion address
+struct db_contact * db_contact_get_by_onion(sqlite3 *db, char *onion_address);
+// Get contact by ther remote signing key public
+struct db_contact * db_contact_get_by_rsk_pub(sqlite3 *db, uint8_t *key);
+
 #endif

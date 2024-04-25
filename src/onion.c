@@ -77,6 +77,4 @@ void onion_extract_key(const char *onion_address, uint8_t *key) {
     for (i = 0; i < ONION_KEY_LEN; i++) {
         key[i] = onion_raw[i];
     }
-
-    return 1;
 }
