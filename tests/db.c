@@ -6,7 +6,8 @@
 #include <sys_crash.h>
 #include <string.h>
 #include <stdint.h>
-#include <db_message.h> 
+#include <db_message.h>
+#include <db_mb_account.h>
 
 int main(void) {
     sqlite3 *db;
@@ -14,6 +15,7 @@ int main(void) {
     struct db_contact *cont;
     struct db_contact **conts;
     struct db_message *msg;
+    struct db_mb_account *acc;
 
     uint8_t gid[] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, };
     
@@ -91,5 +93,11 @@ int main(void) {
         db_contact_delete(dbg, cont);
 
     db_contact_free_all(conts, conts_n);
+
+    acc = db_mb_account_new();
+
+    acc->mailbox_id[0] = 0x25;
+    db_mb_account_save(dbg, acc);
+
     sqlite3_close(dbg);
 }
