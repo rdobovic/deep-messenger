@@ -12,6 +12,8 @@
 #define DB_CONTACT_ENC_KEY_PUB_LEN   526
 #define DB_CONTACT_ENC_KEY_PRIV_LEN  2348
 
+#define DB_CONTACT_MAILBOX_ID_LEN    16
+
 enum db_contact_status {
     DB_CONTACT_ACTIVE,
     DB_CONTACT_PENDING_IN,
@@ -30,6 +32,11 @@ struct db_contact {
     
     // Key extracted from onion address string
     uint8_t onion_pub_key[ONION_KEY_LEN];
+
+    // Mailbox data for given contact
+    int has_mailbox;
+    uint8_t mailbox_id[DB_CONTACT_MAILBOX_ID_LEN];
+    char mailbox_onion[ONION_ADDRESS_LEN];
 
     // Keys generated during friend request
     uint8_t local_sig_key_pub[DB_CONTACT_SIG_KEY_PUB_LEN];
@@ -50,15 +57,30 @@ struct db_contact * db_contact_new(void);
 void db_contact_free(struct db_contact *cont);
 
 // Save given contact to database
-int db_contact_save(sqlite3 *db, struct db_contact *cont);
+void db_contact_save(sqlite3 *db, struct db_contact *cont);
 
-// They return NULL when not found
+// Delete given contact
+void db_contact_delete(sqlite3 *db, struct db_contact *cont);
+
+// Pull new data from the database
+void db_contact_refresh(sqlite3 *db, struct db_contact *cont);
+
+// They return NULL when not found, if dest is not NULL functions will copy
+// data from the database into dest, otherwise they will allocate new structure
 
 // Get contact by their local ID
-struct db_contact * db_contact_get_by_pk(sqlite3 *db, int id);
+struct db_contact * db_contact_get_by_pk(sqlite3 *db, int id, struct db_contact *dest);
 // Get contact by ther onion address
-struct db_contact * db_contact_get_by_onion(sqlite3 *db, char *onion_address);
+struct db_contact * db_contact_get_by_onion(sqlite3 *db, char *onion_address, struct db_contact *dest);
 // Get contact by ther remote signing key public
-struct db_contact * db_contact_get_by_rsk_pub(sqlite3 *db, uint8_t *key);
+struct db_contact * db_contact_get_by_rsk_pub(sqlite3 *db, uint8_t *key, struct db_contact *dest);
+
+// Get all contacts from the db, they are returned as array of
+// pointers to contacts, n will be set to length of the array, if there are no
+// contacts in the db NULL is returned
+struct db_contact ** db_contact_get_all(sqlite3 *db, int *n);
+
+// Free contact list fetched using db_contacts_get_all()
+void db_contact_free_all(struct db_contact **conts, int n);
 
 #endif

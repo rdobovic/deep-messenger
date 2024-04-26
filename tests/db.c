@@ -5,10 +5,18 @@
 #include <debug.h>
 #include <sys_crash.h>
 #include <string.h>
+#include <stdint.h>
+#include <db_message.h> 
 
 int main(void) {
     sqlite3 *db;
+    int conts_n, i;
     struct db_contact *cont;
+    struct db_contact **conts;
+    struct db_message *msg;
+
+    uint8_t gid[] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, };
+    
 
     char arr[10] = "addr", arr2[10];
 
@@ -33,19 +41,55 @@ int main(void) {
     b[8] = '\0';
     debug("%d %s %s\n", a, b, c);
 
-    //cont = db_contact_new();
+    cont = db_contact_new();
 
-    cont = db_contact_get_by_pk(dbg, 10);
+    //cont = db_contact_get_by_pk(dbg, 10);
+
+    cont->status = DB_CONTACT_ACTIVE;
+    cont->has_mailbox = 1;
+    strcpy(cont->nickname, "rdobovic");
+    strcpy(cont->onion_address, "i4mcwgorejxtforxrd7dsf73hsiiphhlgxxz3aeuef3hixdcv4vg3bid.onion");
+    strcpy(cont->mailbox_onion, "i4mcwgorejxtforxrd7dsf73hsiiphhlgxxz3aeuef3hixdcv4vg3bid.onion");
+    db_contact_save(dbg, cont);
+
+    //strcpy(cont->nickname, "rdobovic122");
+    //db_contact_save(dbg, cont);
 
     debug("nick: %s", cont->nickname);
 
-    //cont->status = DB_CONTACT_ACTIVE;
-    //strcpy(cont->nickname, "rdobovic");
-    //strcpy(cont->onion_address, "i4mcwgorejxtforxrd7dsf73hsiiphhlgxxz3aeuef3hixdcv4vg3bid.onion");
-    //db_contact_save(dbg, cont);
+    conts = db_contact_get_all(dbg, &conts_n);
 
-    strcpy(cont->nickname, "rdobovic122");
-    db_contact_save(dbg, cont);
+    debug("Contacts:");
+    for (i = 0; i < conts_n; i++) {
+        debug("- [%d] %s", conts[i]->id, conts[i]->nickname);
+        //db_contact_delete(dbg, conts[i]);
+    }
+    debug("Done");
 
+    msg = db_message_new();
+
+    msg->contact_id = cont->id;
+    msg->type = DB_MESSAGE_TEXT;
+    msg->status = DB_MESSAGE_RECV_CONFIRMED;
+    msg->sender = DB_MESSAGE_SENDER_FRIEND;
+    db_message_set_text(msg, "Ola", -1);
+    db_message_save(dbg, msg);
+    db_message_free(msg);
+
+    msg = db_message_get_by_gid(dbg, gid, NULL);
+    debug("MSG: %s", msg == NULL ? "NONE" : msg->body_text);
+    db_message_free(msg);
+    db_contact_free(cont);
+
+    cont = db_contact_get_by_pk(dbg, 3, NULL);
+    msg = db_message_get_last(dbg, cont, NULL);
+
+    if (cont && msg)
+        debug("[%s] %s", cont->nickname, msg->body_text);
+
+    if (cont)
+        db_contact_delete(dbg, cont);
+
+    db_contact_free_all(conts, conts_n);
     sqlite3_close(dbg);
 }
