@@ -4,14 +4,12 @@
 #include <db_contact.h>
 #include <stdint.h>
 #include <sqlite3.h>
-
-#define DB_MB_ACCOUNT_SIG_KEY_PUB_LEN  32
-#define DB_MB_ACCOUNT_SIG_KEY_PRIV_LEN 64
+#include <constants.h>
 
 struct db_mb_account {
     int id;
-    uint8_t mailbox_id[DB_CONTACT_MAILBOX_ID_LEN];
-    uint8_t signing_pub_key[DB_MB_ACCOUNT_SIG_KEY_PUB_LEN];
+    uint8_t mailbox_id[MAILBOX_ID_LEN];
+    uint8_t signing_pub_key[MAILBOX_ACCOUNT_KEY_PUB_LEN];
 };
 
 // Create new empty account object

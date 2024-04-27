@@ -8,6 +8,7 @@
 #include <db_init.h>
 #include <helpers.h>
 #include <sqlite3.h>
+#include <constants.h>
 
 // Create new empty message object
 struct db_message * db_message_new(void) {
@@ -50,7 +51,7 @@ void db_message_save(sqlite3 *db, struct db_message *msg) {
         sys_db_crash(db, "Failed to save message into database");
 
     if (
-        SQLITE_OK != sqlite3_bind_blob(stmt, 1, msg->global_id, DB_MESSAGE_ID_LEN, NULL) ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 1, msg->global_id, MESSAGE_ID_LEN, NULL) ||
         SQLITE_OK != sqlite3_bind_int(stmt, 2, msg->contact_id) ||
         SQLITE_OK != sqlite3_bind_int(stmt, 3, msg->sender)   ||
         SQLITE_OK != sqlite3_bind_int(stmt, 4, msg->status)   ||
@@ -71,7 +72,7 @@ void db_message_save(sqlite3 *db, struct db_message *msg) {
         != SQLITE_OK ||
 
         ((msg->type == DB_MESSAGE_MBOX) ?
-            sqlite3_bind_blob(stmt, 8, msg->body_mbox_id, DB_CONTACT_MAILBOX_ID_LEN, NULL) :
+            sqlite3_bind_blob(stmt, 8, msg->body_mbox_id, MAILBOX_ID_LEN, NULL) :
             sqlite3_bind_null(stmt, 8)) 
         != SQLITE_OK ||
 
@@ -145,7 +146,7 @@ static struct db_message * db_message_process_row(sqlite3 *db, sqlite3_stmt *stm
     msg->id = sqlite3_column_int(stmt, 0);
 
     memcpy(msg->global_id, sqlite3_column_text(stmt, 1),
-        min(DB_MESSAGE_ID_LEN, sqlite3_column_bytes(stmt, 1)));
+        min(MESSAGE_ID_LEN, sqlite3_column_bytes(stmt, 1)));
 
     msg->contact_id = sqlite3_column_int(stmt, 2);
     msg->sender = sqlite3_column_int(stmt, 3);
@@ -158,15 +159,15 @@ static struct db_message * db_message_process_row(sqlite3 *db, sqlite3_stmt *stm
 
     if (msg->type == DB_MESSAGE_NICK) {
         msg->body_nick_len =
-            min(DB_CONTACT_NICK_MAX_LEN, sqlite3_column_bytes(stmt, 7));
+            min(CLIENT_NICK_MAX_LEN, sqlite3_column_bytes(stmt, 7));
         memcpy(msg->body_nick, sqlite3_column_text(stmt, 7), msg->body_nick_len);
     }
 
     if (msg->type == DB_MESSAGE_MBOX) {
         memcpy(msg->body_mbox_id, sqlite3_column_text(stmt, 8),
-            min(DB_CONTACT_MAILBOX_ID_LEN, sqlite3_column_bytes(stmt, 8)));
+            min(MAILBOX_ID_LEN, sqlite3_column_bytes(stmt, 8)));
         memcpy(msg->body_mbox_onion, sqlite3_column_text(stmt, 9),
-            min(DB_CONTACT_MAILBOX_ID_LEN, sqlite3_column_bytes(stmt, 9)));
+            min(MAILBOX_ID_LEN, sqlite3_column_bytes(stmt, 9)));
     }
 
     return msg;
@@ -201,7 +202,7 @@ struct db_message * db_message_get_by_gid(sqlite3 *db, uint8_t *gid, struct db_m
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to fetch message from database (by gid)");
 
-    if (sqlite3_bind_blob(stmt, 1, gid, DB_MESSAGE_ID_LEN, NULL) != SQLITE_OK)
+    if (sqlite3_bind_blob(stmt, 1, gid, MESSAGE_ID_LEN, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to bind message id, when fetching");
 
     msg = db_message_process_row(db, stmt, dest);

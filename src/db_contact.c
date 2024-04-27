@@ -7,6 +7,7 @@
 #include <db_contact.h>
 #include <sys_memory.h>
 #include <helpers.h>
+#include <constants.h>
 
 // Create new empty contact object
 struct db_contact * db_contact_new(void) {
@@ -58,14 +59,14 @@ void db_contact_save(sqlite3 *db, struct db_contact *cont) {
         SQLITE_OK != sqlite3_bind_text(stmt, 3, cont->onion_address, ONION_ADDRESS_LEN, NULL)       ||
         SQLITE_OK != sqlite3_bind_blob(stmt, 4, cont->onion_pub_key, ONION_KEY_LEN, NULL)           ||
         SQLITE_OK != sqlite3_bind_int(stmt, 5, cont->has_mailbox)                                   ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 6, cont->mailbox_id, DB_CONTACT_MAILBOX_ID_LEN, NULL)  ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 6, cont->mailbox_id, MAILBOX_ID_LEN, NULL)  ||
         SQLITE_OK != sqlite3_bind_text(stmt, 7, cont->mailbox_onion, ONION_ADDRESS_LEN, NULL)       ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 8, cont->local_sig_key_pub, DB_CONTACT_SIG_KEY_PUB_LEN, NULL)    ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 9, cont->local_sig_key_priv, DB_CONTACT_SIG_KEY_PRIV_LEN, NULL)  ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 10, cont->local_enc_key_pub, DB_CONTACT_ENC_KEY_PUB_LEN, NULL)   ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 11, cont->local_sig_key_priv, DB_CONTACT_ENC_KEY_PRIV_LEN, NULL) ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 12, cont->remote_sig_key_pub, DB_CONTACT_SIG_KEY_PUB_LEN, NULL)  ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 13, cont->remote_enc_key_pub, DB_CONTACT_ENC_KEY_PUB_LEN, NULL)
+        SQLITE_OK != sqlite3_bind_blob(stmt, 8, cont->local_sig_key_pub, CLIENT_SIG_KEY_PUB_LEN, NULL)    ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 9, cont->local_sig_key_priv, CLIENT_SIG_KEY_PRIV_LEN, NULL)  ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 10, cont->local_enc_key_pub, CLIENT_ENC_KEY_PUB_LEN, NULL)   ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 11, cont->local_sig_key_priv, CLIENT_ENC_KEY_PRIV_LEN, NULL) ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 12, cont->remote_sig_key_pub, CLIENT_SIG_KEY_PUB_LEN, NULL)  ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 13, cont->remote_enc_key_pub, CLIENT_ENC_KEY_PUB_LEN, NULL)
     ) {
         sys_db_crash(db, "Failed to bind contact fields");
     }
@@ -106,7 +107,7 @@ static struct db_contact * db_contact_process_row(sqlite3 *db, sqlite3_stmt *stm
     cont->status = sqlite3_column_int(stmt, 1);
     // Nickname
     memcpy(cont->nickname, sqlite3_column_text(stmt, 2),
-        min(DB_CONTACT_NICK_MAX_LEN, sqlite3_column_bytes(stmt, 2)));
+        min(CLIENT_NICK_MAX_LEN, sqlite3_column_bytes(stmt, 2)));
     // Onion address
     memcpy(cont->onion_address, sqlite3_column_text(stmt, 3),
         min(ONION_ADDRESS_LEN, sqlite3_column_bytes(stmt, 3)));
@@ -118,29 +119,29 @@ static struct db_contact * db_contact_process_row(sqlite3 *db, sqlite3_stmt *stm
     cont->has_mailbox = sqlite3_column_int(stmt, 5);
     // Mailbox ID
     memcpy(cont->mailbox_id, sqlite3_column_blob(stmt, 6),
-        min(DB_CONTACT_MAILBOX_ID_LEN, sqlite3_column_bytes(stmt, 6)));
+        min(MAILBOX_ID_LEN, sqlite3_column_bytes(stmt, 6)));
     // Mailbox onion address
     memcpy(cont->mailbox_onion, sqlite3_column_text(stmt, 7),
         min(ONION_ADDRESS_LEN, sqlite3_column_bytes(stmt, 7)));
 
     // Local signing key public
     memcpy(cont->local_sig_key_pub, sqlite3_column_blob(stmt, 8),
-        min(DB_CONTACT_SIG_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 8)));
+        min(CLIENT_SIG_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 8)));
     // Local signing key private
     memcpy(cont->local_sig_key_priv, sqlite3_column_blob(stmt, 9),
-        min(DB_CONTACT_SIG_KEY_PRIV_LEN, sqlite3_column_bytes(stmt, 9)));
+        min(CLIENT_SIG_KEY_PRIV_LEN, sqlite3_column_bytes(stmt, 9)));
     // Local signing key public
     memcpy(cont->local_enc_key_pub, sqlite3_column_blob(stmt, 10),
-        min(DB_CONTACT_ENC_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 10)));
+        min(CLIENT_ENC_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 10)));
     // Local signing key private
     memcpy(cont->local_enc_key_priv, sqlite3_column_blob(stmt, 11),
-        min(DB_CONTACT_ENC_KEY_PRIV_LEN, sqlite3_column_bytes(stmt, 11)));
+        min(CLIENT_ENC_KEY_PRIV_LEN, sqlite3_column_bytes(stmt, 11)));
     // Remote signing key public
     memcpy(cont->remote_sig_key_pub, sqlite3_column_blob(stmt, 12),
-        min(DB_CONTACT_SIG_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 12)));
+        min(CLIENT_SIG_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 12)));
     // Remote signing key public
     memcpy(cont->remote_enc_key_pub, sqlite3_column_blob(stmt, 13),
-        min(DB_CONTACT_ENC_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 13)));
+        min(CLIENT_ENC_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 13)));
 
     return cont;
 }
@@ -193,7 +194,7 @@ struct db_contact * db_contact_get_by_rsk_pub(sqlite3 *db, uint8_t *key, struct 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to fetch database contact (by rsk pub)");
 
-    if (sqlite3_bind_text(stmt, 1, key, DB_CONTACT_SIG_KEY_PUB_LEN, NULL) != SQLITE_OK)
+    if (sqlite3_bind_text(stmt, 1, key, CLIENT_SIG_KEY_PUB_LEN, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to bind contact onion address, when fetching");
 
     cont = db_contact_process_row(db, stmt, dest);

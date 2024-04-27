@@ -4,15 +4,7 @@
 #include <onion.h>
 #include <stdint.h>
 #include <sqlite3.h>
-
-#define DB_CONTACT_NICK_MAX_LEN   255   // Defined in protocol definition
-
-#define DB_CONTACT_SIG_KEY_PUB_LEN   32
-#define DB_CONTACT_SIG_KEY_PRIV_LEN  64
-#define DB_CONTACT_ENC_KEY_PUB_LEN   526
-#define DB_CONTACT_ENC_KEY_PRIV_LEN  2348
-
-#define DB_CONTACT_MAILBOX_ID_LEN    16
+#include <constants.h>
 
 enum db_contact_status {
     DB_CONTACT_ACTIVE,
@@ -26,7 +18,7 @@ struct db_contact {
     // Current friend status (active, pending incomming/outgoing)
     enum db_contact_status status;
     // User nickname
-    char nickname[DB_CONTACT_NICK_MAX_LEN + 1];
+    char nickname[CLIENT_NICK_MAX_LEN + 1];
     // Onion address string
     char onion_address[ONION_ADDRESS_LEN + 1];
     
@@ -35,18 +27,18 @@ struct db_contact {
 
     // Mailbox data for given contact
     int has_mailbox;
-    uint8_t mailbox_id[DB_CONTACT_MAILBOX_ID_LEN];
+    uint8_t mailbox_id[MAILBOX_ID_LEN];
     char mailbox_onion[ONION_ADDRESS_LEN];
 
     // Keys generated during friend request
-    uint8_t local_sig_key_pub[DB_CONTACT_SIG_KEY_PUB_LEN];
-    uint8_t local_sig_key_priv[DB_CONTACT_SIG_KEY_PRIV_LEN];
-    uint8_t local_enc_key_pub[DB_CONTACT_ENC_KEY_PUB_LEN];
-    uint8_t local_enc_key_priv[DB_CONTACT_ENC_KEY_PRIV_LEN];
+    uint8_t local_sig_key_pub[CLIENT_SIG_KEY_PUB_LEN];
+    uint8_t local_sig_key_priv[CLIENT_SIG_KEY_PRIV_LEN];
+    uint8_t local_enc_key_pub[CLIENT_ENC_KEY_PUB_LEN];
+    uint8_t local_enc_key_priv[CLIENT_ENC_KEY_PRIV_LEN];
 
     // Keys received during friend request
-    uint8_t remote_sig_key_pub[DB_CONTACT_SIG_KEY_PUB_LEN];
-    uint8_t remote_enc_key_pub[DB_CONTACT_ENC_KEY_PUB_LEN];
+    uint8_t remote_sig_key_pub[CLIENT_SIG_KEY_PUB_LEN];
+    uint8_t remote_enc_key_pub[CLIENT_ENC_KEY_PUB_LEN];
 };
 
 // Create new empty contact object

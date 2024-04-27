@@ -12,6 +12,7 @@
 #include <base32.h>
 #include <db_mb_contact.h>
 #include <db_mb_message.h>
+#include <constants.h>
 
 int main(void) {
     sqlite3 *db;
@@ -121,7 +122,7 @@ int main(void) {
 
     key->uses_left = 10;
     key->key[0] = 0xBB;
-    key->key[DB_MB_KEY_LEN - 1] = 0xBB;
+    key->key[MAILBOX_ACCESS_KEY_LEN - 1] = 0xBB;
 
     db_mb_key_save(dbg, key);
 
@@ -130,8 +131,8 @@ int main(void) {
     debug("Key list: ");
     for (i = 0; i < keys_n; i++) {
         int len;
-        char key_encoded[BASE32_ENCODED_LEN(DB_MB_KEY_LEN) + 1];
-        len = base32_encode(keys[i]->key, DB_MB_KEY_LEN, key_encoded, 0);
+        char key_encoded[BASE32_ENCODED_LEN(MAILBOX_ACCESS_KEY_LEN) + 1];
+        len = base32_encode(keys[i]->key, MAILBOX_ACCESS_KEY_LEN, key_encoded, 0);
         key_encoded[len] = '\0';
 
         debug("- [%03d] key(%s) uses_left(%d)", keys[i]->id, key_encoded, keys[i]->uses_left);

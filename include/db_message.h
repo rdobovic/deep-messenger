@@ -4,8 +4,8 @@
 #include <onion.h>
 #include <db_contact.h>
 #include <stdint.h>
+#include <constants.h>
 
-#define DB_MESSAGE_ID_LEN     16
 #define DB_MESSAGE_TEXT_CHUNK 32
 
 enum db_message_types {
@@ -37,16 +37,16 @@ struct db_message {
     enum db_message_status status;
 
     enum db_message_types type;
-    uint8_t global_id[DB_MESSAGE_ID_LEN];
+    uint8_t global_id[MESSAGE_ID_LEN];
 
     char *body_text;
     int body_text_len;
     int body_text_n_chunks;
 
     int body_nick_len;
-    char body_nick[DB_CONTACT_NICK_MAX_LEN];
+    char body_nick[CLIENT_NICK_MAX_LEN];
 
-    uint8_t body_mbox_id[DB_CONTACT_MAILBOX_ID_LEN];
+    uint8_t body_mbox_id[MAILBOX_ID_LEN];
     uint8_t body_mbox_onion[ONION_ADDRESS_LEN + 1];
 };
 

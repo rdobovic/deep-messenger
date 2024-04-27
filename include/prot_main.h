@@ -7,14 +7,11 @@
 #include <event2/event.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
-
-#define DEEP_MESSENGER_PORT 20405
-#define DEEP_MESSENGER_PROTOCOL_VER 1
+#include <constants.h>
 
 #define PROT_QUEUE_LEN 32
 #define PROT_ERROR_MAX_LEN 127
 
-#define PROT_TRANSACTION_ID_LEN 16
 #define PROT_HEADER_LEN 2
 
 // Application can work in one of following modes, some packets will be
@@ -35,12 +32,11 @@ enum prot_message_codes {
     PROT_MAILBOX_REGISTER     = 0x85,
     PROT_MAILBOX_GRANTED      = 0x86,
     PROT_MAILBOX_FETCH        = 0x87,
-    PROT_MAILBOX_ADD_CONTACT  = 0x88,
-    PROT_MAILBOX_DEL_CONTACT  = 0x89,
-    PROT_MAILBOX_DEL_ACCOUNT  = 0x8A,
-    PROT_MAILBOX_DEL_MESSAGES = 0x8B,
-    PROT_CLIENT_FETCH         = 0x8C,
-    PROT_MESSAGE_LIST         = 0x8D,
+    PROT_MAILBOX_SET_CONTACTS = 0x88,
+    PROT_MAILBOX_DEL_ACCOUNT  = 0x89,
+    PROT_MAILBOX_DEL_MESSAGES = 0x8A,
+    PROT_CLIENT_FETCH         = 0x8B,
+    PROT_MESSAGE_LIST         = 0x8C,
 };
 
 enum prot_status_codes {
@@ -109,7 +105,7 @@ struct prot_main {
     struct event_base *event_base;  // Event base
 
     int transaction_started;                          // Indicates if transaction has started
-    uint8_t transaction_id[PROT_TRANSACTION_ID_LEN];  // Transaction ID associated with this connection
+    uint8_t transaction_id[TRANSACTION_ID_LEN];  // Transaction ID associated with this connection
 
     // Set to 1 by the cb function when receiver processed the message
     int current_recv_done;

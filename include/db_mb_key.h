@@ -3,12 +3,11 @@
 
 #include <stdint.h>
 #include <sqlite3.h>
-
-#define DB_MB_KEY_LEN 25
+#include <constants.h>
 
 struct db_mb_key {
     int id;
-    uint8_t key[DB_MB_KEY_LEN];
+    uint8_t key[MAILBOX_ACCESS_KEY_LEN];
     int uses_left;
 };
 

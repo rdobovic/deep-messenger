@@ -7,6 +7,7 @@
 #include <db_message.h>
 #include <db_mb_account.h>
 #include <db_mb_message.h>
+#include <constants.h>
 
 // Create new empty mailbox message object
 struct db_mb_message * db_mb_message_new(void) {
@@ -72,7 +73,7 @@ void db_mb_message_save(sqlite3 *db, struct db_mb_message *msg) {
     if (
         SQLITE_OK != sqlite3_bind_int(stmt, 1, msg->account_id) ||
         SQLITE_OK != sqlite3_bind_int(stmt, 2, msg->contact_id) ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 3, msg->global_id, DB_MESSAGE_ID_LEN, NULL) ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 3, msg->global_id, MESSAGE_ID_LEN, NULL) ||
         SQLITE_OK != sqlite3_bind_blob(stmt, 4, msg->data, msg->data_len, NULL)
     ) {
         sys_db_crash(db, "Failed to bind mailbox message fields");
@@ -134,7 +135,7 @@ static struct db_mb_message * db_mb_message_process_row(
     msg->contact_id = sqlite3_column_int(stmt, 2);
 
     memcpy(msg->global_id, sqlite3_column_blob(stmt, 3),
-        min(DB_MESSAGE_ID_LEN, sqlite3_column_bytes(stmt, 3)));
+        min(MESSAGE_ID_LEN, sqlite3_column_bytes(stmt, 3)));
 
     db_mb_message_set_data(msg, sqlite3_column_blob(stmt, 4), sqlite3_column_bytes(stmt, 4));
     return msg;
@@ -174,7 +175,7 @@ struct db_mb_message * db_mb_message_get_by_acc_and_gid(
     
     if (
         SQLITE_OK != sqlite3_bind_int(stmt, 1, acc->id) ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 2, gid, DB_MESSAGE_ID_LEN, NULL)
+        SQLITE_OK != sqlite3_bind_blob(stmt, 2, gid, MESSAGE_ID_LEN, NULL)
     )
         sys_db_crash(db, "Failed to bind mailbox message fields, while fetching");
 

@@ -5,11 +5,12 @@
 #include <sqlite3.h>
 #include <db_contact.h>
 #include <db_mb_account.h>
+#include <constants.h>
 
 struct db_mb_contact {
     int id;
     int account_id;
-    uint8_t signing_pub_key[DB_CONTACT_SIG_KEY_PUB_LEN];
+    uint8_t signing_pub_key[CLIENT_SIG_KEY_PUB_LEN];
 };
 
 // Create new empty contact object

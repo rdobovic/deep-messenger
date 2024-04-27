@@ -6,6 +6,7 @@
 #include <event2/listener.h>
 
 #include <debug.h>
+#include <constants.h>
 #include <prot_main.h>
 #include <prot_transaction.h>
 

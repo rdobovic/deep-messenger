@@ -8,6 +8,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <debug.h>
+#include <constants.h>
 
 /**
  * Transaction REQUEST message
@@ -146,13 +147,13 @@ struct prot_tran_handler * prot_txn_res_htran(struct prot_txn_res *msg) {
     htran->cleanup_cb = prot_txn_res_tran_cleanup_cb;
 
     // Generate random transaction id
-    if (RAND_bytes(msg->txn_id, PROT_TRANSACTION_ID_LEN) != 1) {
+    if (RAND_bytes(msg->txn_id, TRANSACTION_ID_LEN) != 1) {
         sys_crash("openssl", "Failed to generate random bytes with error: %s",
             ERR_error_string(ERR_get_error(), NULL));
     }
 
     evbuffer_add(htran->buffer, prot_header(PROT_TRANSACTION_RESPONSE), PROT_HEADER_LEN);
-    evbuffer_add(htran->buffer, msg->txn_id, PROT_TRANSACTION_ID_LEN);
+    evbuffer_add(htran->buffer, msg->txn_id, TRANSACTION_ID_LEN);
     return htran;
 }
 
@@ -181,7 +182,7 @@ static void prot_txn_res_tran_done_cb(struct prot_main *pmain, struct prot_tran_
     debug("Transaction response transmission finished");
 
     pmain->transaction_started = 1;
-    memcpy(pmain->transaction_id, msg->txn_id, PROT_TRANSACTION_ID_LEN);
+    memcpy(pmain->transaction_id, msg->txn_id, TRANSACTION_ID_LEN);
 }
 
 static void prot_txn_res_recv_cleanup_cb(struct prot_recv_handler *phand) {
@@ -195,11 +196,11 @@ static void prot_txn_res_recv_handle_cb(struct prot_main *pmain, struct prot_rec
 
     buff = bufferevent_get_input(pmain->bev);
 
-    if (evbuffer_get_length(buff) < PROT_HEADER_LEN + PROT_TRANSACTION_ID_LEN)
+    if (evbuffer_get_length(buff) < PROT_HEADER_LEN + TRANSACTION_ID_LEN)
         return;
 
     evbuffer_drain(buff, PROT_HEADER_LEN);
-    evbuffer_remove(buff, pmain->transaction_id, PROT_TRANSACTION_ID_LEN);
+    evbuffer_remove(buff, pmain->transaction_id, TRANSACTION_ID_LEN);
     pmain->tran_enabled = 1;
     pmain->current_recv_done = 1;
 }

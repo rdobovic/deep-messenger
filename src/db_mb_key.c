@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <helpers.h>
 #include <sys_memory.h>
+#include <constants.h>
 
 // Create new empty key object
 struct db_mb_key * db_mb_key_new(void) {
@@ -40,7 +41,7 @@ void db_mb_key_save(sqlite3 *db, struct db_mb_key *key) {
         sys_db_crash(db, "Failed to save mailbox key into the database");
 
     if (
-        SQLITE_OK != sqlite3_bind_blob(stmt, 1, key->key, DB_MB_KEY_LEN, NULL) ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 1, key->key, MAILBOX_ACCESS_KEY_LEN, NULL) ||
         SQLITE_OK != sqlite3_bind_int(stmt, 2, key->uses_left)
     ) {
         sys_db_crash(db, "Failed to bind mailbox key fields");
@@ -98,7 +99,7 @@ static struct db_mb_key * db_mb_key_process_row(sqlite3 *db, sqlite3_stmt *stmt,
     key->uses_left = sqlite3_column_int(stmt, 2);
 
     memcpy(key->key, sqlite3_column_blob(stmt, 1),
-        min(DB_MB_KEY_LEN, sqlite3_column_bytes(stmt, 1)));
+        min(MAILBOX_ACCESS_KEY_LEN, sqlite3_column_bytes(stmt, 1)));
 
     return key;
 }
@@ -132,7 +133,7 @@ struct db_mb_key * db_mb_key_get_by_key(sqlite3 *db, uint8_t *access_key, struct
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to fetch mailbox key from database (by key)");
 
-    if (sqlite3_bind_blob(stmt, 1, access_key, DB_MB_KEY_LEN, NULL) != SQLITE_OK)
+    if (sqlite3_bind_blob(stmt, 1, access_key, MAILBOX_ACCESS_KEY_LEN, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to bind mailbox key key, when fetching");
 
     key = db_mb_key_process_row(db, stmt, dest);

@@ -5,6 +5,7 @@
 #include <sqlite3.h>
 #include <db_message.h>
 #include <db_mb_account.h>
+#include <constants.h>
 
 #define DB_MB_MESSAGE_CHUNK_SIZE 63
 
@@ -12,7 +13,7 @@ struct db_mb_message {
     int id;
     int account_id;
     int contact_id;
-    uint8_t global_id[DB_MESSAGE_ID_LEN];
+    uint8_t global_id[MESSAGE_ID_LEN];
 
     uint8_t *data;
     int data_len;

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <prot_main.h>
+#include <constants.h>
 
 /**
  * Transaction REQUEST message
@@ -36,7 +37,7 @@ struct prot_txn_res {
     struct prot_recv_handler hrecv;
     struct prot_tran_handler htran;
 
-    uint8_t txn_id[PROT_TRANSACTION_ID_LEN];
+    uint8_t txn_id[TRANSACTION_ID_LEN];
 };
 
 // Allocate new prot transaction response header

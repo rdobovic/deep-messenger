@@ -5,6 +5,7 @@
 #include <event2/bufferevent.h>
 
 #include <debug.h>
+#include <constants.h>
 #include <prot_main.h>
 #include <prot_transaction.h>
 

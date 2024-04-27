@@ -3,6 +3,7 @@
 #include <socks5.h>
 #include <queue.h>
 #include <string.h>
+#include <constants.h>
 #include <event2/event.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
@@ -291,14 +292,14 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx)
                 }
 
                 // Transaction ID not arrived yet
-                if (evbuffer_get_length(buff) < PROT_HEADER_LEN + PROT_TRANSACTION_ID_LEN)
+                if (evbuffer_get_length(buff) < PROT_HEADER_LEN + TRANSACTION_ID_LEN)
                     return;
 
-                header = evbuffer_pullup(buff, PROT_HEADER_LEN + PROT_TRANSACTION_ID_LEN);
+                header = evbuffer_pullup(buff, PROT_HEADER_LEN + TRANSACTION_ID_LEN);
                 transaction_id = header + PROT_HEADER_LEN;
 
                 // Compare if transaction id is valid
-                for (i = 0; i < PROT_TRANSACTION_ID_LEN; i++)
+                for (i = 0; i < TRANSACTION_ID_LEN; i++)
                 {
                     if (transaction_id[i] != pmain->transaction_id[i])
                     {

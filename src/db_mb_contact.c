@@ -6,6 +6,7 @@
 #include <db_contact.h>
 #include <db_mb_account.h>
 #include <db_mb_contact.h>
+#include <constants.h>
 
 // Create new empty contact object
 struct db_mb_contact *db_mb_contact_new(void) {
@@ -43,7 +44,7 @@ void db_mb_contact_save(sqlite3 *db, struct db_mb_contact *cont) {
 
     if (
         SQLITE_OK != sqlite3_bind_int(stmt, 1, cont->account_id) ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 2, cont->signing_pub_key, DB_CONTACT_SIG_KEY_PUB_LEN, NULL)
+        SQLITE_OK != sqlite3_bind_blob(stmt, 2, cont->signing_pub_key, CLIENT_SIG_KEY_PUB_LEN, NULL)
     ) {
         sys_db_crash(db, "Failed to bind mailbox contact fields");
     }
@@ -119,7 +120,7 @@ static struct db_mb_contact * db_mb_contact_process_row(sqlite3 *db, sqlite3_stm
     cont->account_id = sqlite3_column_int(stmt, 1);
 
     memcpy(cont->signing_pub_key, sqlite3_column_blob(stmt, 2),
-        min(DB_CONTACT_SIG_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 2)));
+        min(CLIENT_SIG_KEY_PUB_LEN, sqlite3_column_bytes(stmt, 2)));
 
     return cont;
 }
@@ -159,7 +160,7 @@ struct db_mb_contact * db_mb_contact_get_by_acc_and_key(
 
     if (
         SQLITE_OK != sqlite3_bind_int(stmt, 1, acc->id)  ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 2, key, DB_CONTACT_SIG_KEY_PUB_LEN, NULL)
+        SQLITE_OK != sqlite3_bind_blob(stmt, 2, key, CLIENT_SIG_KEY_PUB_LEN, NULL)
     )
         sys_db_crash(db, "Failed to bind mailbox contact fields, when fetching");
 
