@@ -80,7 +80,7 @@ struct db_contact * db_contact_get_by_rsk_pub(sqlite3 *db, uint8_t *key, struct 
 // contacts in the db NULL is returned
 struct db_contact ** db_contact_get_all(sqlite3 *db, int *n);
 
-// Free contact list fetched using db_contacts_get_all()
+// Free contact list fetched using db_contact_get_all()
 void db_contact_free_all(struct db_contact **conts, int n);
 
 #endif

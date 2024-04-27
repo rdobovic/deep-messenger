@@ -7,6 +7,7 @@
 #include <sys_memory.h>
 #include <db_init.h>
 #include <helpers.h>
+#include <sqlite3.h>
 
 // Create new empty message object
 struct db_message * db_message_new(void) {
@@ -108,14 +109,15 @@ void db_message_set_text(struct db_message *msg, const char *text, int text_len)
     msg->body_text_len = text_len;
 
     if (!msg->body_text) {
+        msg->body_text_n_chunks = new_arr_len;
         msg->body_text = safe_malloc((sizeof(char) * new_arr_len),
             "Failed to allocate chars for message body");
 
     } else if (msg->body_text_n_chunks < new_arr_len) {
+        msg->body_text_n_chunks = new_arr_len;
         msg->body_text = safe_realloc(msg->body_text, (sizeof(char) * new_arr_len),
             "Failed to reallocate chars for message body");
     }
-    msg->body_text_n_chunks = new_arr_len;
 
     for (i = 0; i < text_len; i++) {
         msg->body_text[i] = text[i];
@@ -124,6 +126,7 @@ void db_message_set_text(struct db_message *msg, const char *text, int text_len)
     msg->body_text[i] = '\0';
 }
 
+// Process the next step of given statement and allocate or populate given object with the row data
 static struct db_message * db_message_process_row(sqlite3 *db, sqlite3_stmt *stmt, struct db_message *dest) {
     int rc;
     struct db_message *msg = dest;
@@ -212,7 +215,8 @@ struct db_message * db_message_get_last(sqlite3 *db, struct db_contact *cont, st
     sqlite3_stmt *stmt;
     struct db_message *msg;
 
-    const char sql[] = "SELECT * FROM client_messages WHERE contact_id = ? ORDER BY id DESC LIMIT 1";
+    const char sql[] = 
+        "SELECT * FROM client_messages WHERE contact_id = ? ORDER BY id DESC LIMIT 1";
 
     if (!cont)
         return NULL;

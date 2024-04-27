@@ -1,5 +1,6 @@
 #include <onion.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sqlite3.h>
 #include <db_init.h>
@@ -228,6 +229,8 @@ struct db_contact ** db_contact_get_all(sqlite3 *db, int *n) {
 
     *n = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
+
+    if (*n == 0) return NULL;
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to fetch all database contacts");

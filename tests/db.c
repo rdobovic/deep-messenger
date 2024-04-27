@@ -8,14 +8,23 @@
 #include <stdint.h>
 #include <db_message.h>
 #include <db_mb_account.h>
+#include <db_mb_key.h>
+#include <base32.h>
+#include <db_mb_contact.h>
+#include <db_mb_message.h>
 
 int main(void) {
     sqlite3 *db;
-    int conts_n, i;
+    int conts_n, i, keys_n;
     struct db_contact *cont;
     struct db_contact **conts;
     struct db_message *msg;
+    struct db_mb_key *key;
+    struct db_mb_key **keys;
+
     struct db_mb_account *acc;
+    struct db_mb_contact *mcont;
+    struct db_mb_message *mmsg;
 
     uint8_t gid[] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, };
     
@@ -98,6 +107,58 @@ int main(void) {
 
     acc->mailbox_id[0] = 0x25;
     db_mb_account_save(dbg, acc);
+    db_mb_account_refresh(dbg, acc);
+    db_mb_account_free(acc);
+
+    acc = db_mb_account_get_by_pk(dbg, 3, NULL);
+    if (acc) {
+        debug("Some MBID: %x", acc->mailbox_id[0]);
+        db_mb_account_save(dbg, acc);
+        db_mb_account_delete(dbg, acc);
+    }
+
+    key = db_mb_key_new();
+
+    key->uses_left = 10;
+    key->key[0] = 0xBB;
+    key->key[DB_MB_KEY_LEN - 1] = 0xBB;
+
+    db_mb_key_save(dbg, key);
+
+    keys = db_mb_key_get_all(dbg, &keys_n);
+
+    debug("Key list: ");
+    for (i = 0; i < keys_n; i++) {
+        int len;
+        char key_encoded[BASE32_ENCODED_LEN(DB_MB_KEY_LEN) + 1];
+        len = base32_encode(keys[i]->key, DB_MB_KEY_LEN, key_encoded, 0);
+        key_encoded[len] = '\0';
+
+        debug("- [%03d] key(%s) uses_left(%d)", keys[i]->id, key_encoded, keys[i]->uses_left);
+    }
+
+    acc = db_mb_account_new();
+    acc->mailbox_id[0] = 0xAA;
+    acc->mailbox_id[15] = 0xBB;
+    db_mb_account_save(dbg, acc);
+
+    mcont = db_mb_contact_new();
+    mcont->account_id = acc->id;
+    mcont->signing_pub_key[0] = 0xCC;
+    mcont->signing_pub_key[31] = 0xDD;
+    db_mb_contact_save(dbg, mcont);
+
+    mmsg = db_mb_message_new();
+    mmsg->account_id = acc->id;
+    mmsg->contact_id = mcont->id;
+    mmsg->global_id[0] = 0x11;
+    mmsg->global_id[15] = 0x22;
+    db_mb_message_set_data(mmsg, "This is text", 12);
+    db_mb_message_save(dbg, mmsg);
+
+    db_mb_account_free(acc);
+    db_mb_contact_free(mcont);
+    db_mb_message_free(mmsg);
 
     sqlite3_close(dbg);
 }

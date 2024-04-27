@@ -5,10 +5,13 @@
 #include <stdint.h>
 #include <sqlite3.h>
 
+#define DB_MB_ACCOUNT_SIG_KEY_PUB_LEN  32
+#define DB_MB_ACCOUNT_SIG_KEY_PRIV_LEN 64
+
 struct db_mb_account {
     int id;
     uint8_t mailbox_id[DB_CONTACT_MAILBOX_ID_LEN];
-    uint8_t signing_pub_key[DB_CONTACT_SIG_KEY_PUB_LEN];
+    uint8_t signing_pub_key[DB_MB_ACCOUNT_SIG_KEY_PUB_LEN];
 };
 
 // Create new empty account object
@@ -31,9 +34,9 @@ void db_mb_account_refresh(sqlite3 *db, struct db_mb_account *acc);
 // data from the database into dest, otherwise they will allocate new structure
 
 // Get mailbox account by id
-struct db_mb_account * db_mb_account_by_pk(sqlite3 *db, int id, struct db_mb_account *dest);
+struct db_mb_account * db_mb_account_get_by_pk(sqlite3 *db, int id, struct db_mb_account *dest);
 
 // Get mailbox account by unique mailbox id
-struct db_mb_account * db_mb_account_by_mbid(sqlite3 *db, uint8_t *mbid, struct db_mb_account *dest);
+struct db_mb_account * db_mb_account_get_by_mbid(sqlite3 *db, uint8_t *mbid, struct db_mb_account *dest);
 
 #endif
