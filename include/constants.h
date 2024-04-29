@@ -1,12 +1,29 @@
 #ifndef _INCLUDE_CONSTANTS_H_
 #define _INCLUDE_CONSTANTS_H_
 
+/**
+ * Application constants
+ */
+
 // Onion service will expose this port
 #define DEEP_MESSENGER_PORT 20425
 // Globaly used protocol version
 #define DEEP_MESSENGER_PROTOCOL_VER 1
 // Onion service will expose this port when running mailbox
 #define DEEP_MESSENGER_MAILBOX_PORT 20426
+
+/**
+ * Cryptography
+ */
+
+// ED25519 keys
+#define ED25519_PUB_KEY_LEN   32
+#define ED25519_PRIV_KEY_LEN  32
+#define ED25519_SIGNATURE_LEN 64
+
+/**
+ * Mailbox service specific constants
+ */
 
 // Length of string used to identify mailbox account
 #define MAILBOX_ID_LEN         16
@@ -17,6 +34,10 @@
 #define MAILBOX_ACCOUNT_KEY_PUB_LEN  32
 // Used for signing when communicating with mailbox (ED25519)
 #define MAILBOX_ACCOUNT_KEY_PRIV_LEN 64
+
+/**
+ * Client and 
+ */
 
 // Transaction id generated for each transaction (connection)
 #define TRANSACTION_ID_LEN 16

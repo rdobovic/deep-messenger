@@ -37,7 +37,6 @@ struct db_mb_contact * db_mb_contact_get_by_pk(sqlite3 *db, int id, struct db_mb
 
 // Get mailbox contact by associated account and signing key
 struct db_mb_contact * db_mb_contact_get_by_acc_and_key(
-    sqlite3 *db, struct db_mb_account *acc, uint8_t *key, struct db_mb_contact *dest
-);
+    sqlite3 *db, struct db_mb_account *acc, uint8_t *key, struct db_mb_contact *dest);
 
 #endif

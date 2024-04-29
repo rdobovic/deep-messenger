@@ -76,6 +76,8 @@ struct prot_recv_handler {
 typedef void (*prot_tran_cleanup_cb)(struct prot_tran_handler *phand);
 // Called after transmission is done
 typedef void (*prot_tran_done_cb)(struct prot_main *pmain, struct prot_tran_handler *phand);
+// Called before transmission
+typedef void (*prot_tran_setup_cb)(struct prot_main *pmain, struct prot_tran_handler *phand);
 
 struct prot_tran_handler {
     enum prot_message_codes msg_code;
@@ -84,6 +86,7 @@ struct prot_tran_handler {
     struct evbuffer *buffer;
     // Callback to call once message is transmitted
     prot_tran_done_cb done_cb;
+    prot_tran_setup_cb setup_cb;
     prot_tran_cleanup_cb cleanup_cb;
 };
 
@@ -99,6 +102,8 @@ struct prot_main {
     void *cbarg;                 // Pointer given to callbacks
     prot_main_done_cb done_cb;   // Called when all messages are processed and the transmition queue is empty
     prot_main_close_cb close_cb; // Called when connection is closed
+
+    enum prot_status_codes status;
 
     struct bufferevent *bev;        // Bufferevent for this connection
     int bev_ready;                  // Set to 1 once bufferevent is ready
@@ -185,5 +190,9 @@ const char * prot_main_error_string(enum prot_status_codes err_code);
 // Returns pointer to protocol header generated for given message type
 // length of the header is equal to PROT_HEADER_LEN
 const uint8_t * prot_header(enum prot_message_codes msg_code);
+
+// Called from within tran/recv handler callbacks in case of error, main protocol
+// handler will then free itself and close the connection
+void prot_main_set_error(struct prot_main *pmain, enum prot_status_codes err_code);
 
 #endif

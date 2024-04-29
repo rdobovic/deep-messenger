@@ -44,8 +44,7 @@ struct db_mb_message * db_mb_message_get_by_pk(sqlite3 *db, int id, struct db_mb
 
 // Get mailbox message by associated account and global message id
 struct db_mb_message * db_mb_message_get_by_acc_and_gid(
-    sqlite3 *db, struct db_mb_account *acc, uint8_t *gid, struct db_mb_message *dest
-);
+    sqlite3 *db, struct db_mb_account *acc, uint8_t *gid, struct db_mb_message *dest);
 
 // Get all mailbox messages for given account
 struct db_mb_message ** db_mb_message_get_all(sqlite3 *db, struct db_mb_account *acc, int *n);

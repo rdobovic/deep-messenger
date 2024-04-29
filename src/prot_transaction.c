@@ -14,13 +14,45 @@
  * Transaction REQUEST message
  */
 
-// Handler callbacks for transaction request transmission
-static void prot_txn_req_tran_cleanup_cb(struct prot_tran_handler *phand);
-static void prot_txn_req_tran_done_cb(struct prot_main *pmain, struct prot_tran_handler *phand);
+// Callback functions
+static void req_tran_cleanup(struct prot_tran_handler *phand) {
+    struct prot_txn_req *msg = phand->msg;
+    prot_txn_req_free(msg);
+}
 
-// Handler callbacks fot transaction request receiver
-static void prot_txn_req_recv_cleanup_cb(struct prot_recv_handler *phand);
-static void prot_txn_req_recv_handle_cb(struct prot_main *pmain, struct prot_recv_handler *phand);
+static void req_tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand) {
+    debug("Setting up transaction req");
+    evbuffer_add(phand->buffer, prot_header(PROT_TRANSACTION_REQUEST), PROT_HEADER_LEN);
+}
+
+static void req_tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) {
+    struct prot_txn_res *res;
+    debug("Transaction request transmission finished");
+
+    // Create new response handler and put it into queue
+    res = prot_txn_res_new();
+    prot_main_push_recv(pmain, &(res->hrecv));
+    // Disable transmission until response is received
+    prot_main_tran_enable(pmain, 0);
+}
+
+static void req_recv_cleanup(struct prot_recv_handler *phand) {
+    struct prot_txn_req *msg = phand->msg;
+    prot_txn_req_free(msg);
+}
+
+static void req_recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand) {
+    struct evbuffer *buff;
+    struct prot_txn_res *res;
+    debug("Received transaction request");
+
+    buff = bufferevent_get_input(pmain->bev);
+    evbuffer_drain(buff, PROT_HEADER_LEN);
+
+    res = prot_txn_res_new();
+    prot_main_push_tran(pmain, &(res->htran));
+    pmain->current_recv_done = 1;
+}
 
 // Allocate new prot transaction request handler
 struct prot_txn_req * prot_txn_req_new(void) {
@@ -30,7 +62,19 @@ struct prot_txn_req * prot_txn_req_new(void) {
     msg = safe_malloc( sizeof(struct prot_txn_req), 
         "Failed to allocate transaction request msg");
 
+    msg->hrecv.msg = msg;
+    msg->hrecv.msg_code = PROT_TRANSACTION_REQUEST;
+    msg->hrecv.require_transaction = 0;
+    msg->hrecv.handle_cb = req_recv_handle;
+    msg->hrecv.cleanup_cb = req_recv_cleanup;
+
+    msg->htran.msg = msg;
+    msg->htran.msg_code = PROT_TRANSACTION_REQUEST;
+    msg->htran.done_cb = req_tran_done;
+    msg->htran.setup_cb = req_tran_setup;
+    msg->htran.cleanup_cb = req_tran_cleanup;
     msg->htran.buffer = evbuffer_new();
+
     return msg;
 }
 
@@ -40,111 +84,19 @@ void prot_txn_req_free(struct prot_txn_req *msg) {
     free(msg);
 }
 
-// Prepare transsion handler for given message
-struct prot_tran_handler * prot_txn_req_htran(struct prot_txn_req *msg) {
-    const uint8_t *hd;
-    struct prot_tran_handler *htran = &(msg->htran);
-    debug("Generating transmission handler for transaction request");
-
-    htran->msg = msg;
-    htran->msg_code = PROT_TRANSACTION_REQUEST;
-    htran->done_cb = prot_txn_req_tran_done_cb;
-    htran->cleanup_cb = prot_txn_req_tran_cleanup_cb;
-    hd = prot_header(PROT_TRANSACTION_REQUEST);
-
-    evbuffer_add(htran->buffer, prot_header(PROT_TRANSACTION_REQUEST), PROT_HEADER_LEN);
-    return htran;
-}
-
-// Prepare receive for given message
-struct prot_recv_handler * prot_txn_req_hrecv(struct prot_txn_req *msg) {
-    struct prot_recv_handler *hrecv = &(msg->hrecv);
-    debug("Generating receive handler for transaction request");
-
-    hrecv->msg = msg;
-    hrecv->msg_code = PROT_TRANSACTION_REQUEST;
-    hrecv->require_transaction = 0;
-    hrecv->handle_cb = prot_txn_req_recv_handle_cb;
-    hrecv->cleanup_cb = prot_txn_req_recv_cleanup_cb;
-
-    return hrecv;
-}
-
-// Callback functions
-static void prot_txn_req_tran_cleanup_cb(struct prot_tran_handler *phand) {
-    struct prot_txn_req *msg = phand->msg;
-    prot_txn_req_free(msg);
-}
-
-static void prot_txn_req_tran_done_cb(struct prot_main *pmain, struct prot_tran_handler *phand) {
-    struct prot_txn_res *res;
-    debug("Transaction request transmission finished");
-
-    // Create new response handler and put it into queue
-    res = prot_txn_res_new();
-    prot_main_push_recv(pmain, prot_txn_res_hrecv(res));
-    // Disable transmission until response is received
-    pmain->tran_enabled = 0;
-}
-
-static void prot_txn_req_recv_cleanup_cb(struct prot_recv_handler *phand) {
-    struct prot_txn_req *msg = phand->msg;
-    prot_txn_req_free(msg);
-}
-
-static void prot_txn_req_recv_handle_cb(struct prot_main *pmain, struct prot_recv_handler *phand) {
-    struct evbuffer *buff;
-    struct prot_txn_res *res;
-    debug("Received transaction request");
-
-    buff = bufferevent_get_input(pmain->bev);
-    evbuffer_drain(buff, PROT_HEADER_LEN);
-
-    res = prot_txn_res_new();
-    prot_main_push_tran(pmain, prot_txn_res_htran(res));
-    pmain->current_recv_done = 1;
-}
-
-
 /**
  * Transaction RESPONSE message
  */
 
-// Handler callbacks for transaction request transmission
-static void prot_txn_res_tran_cleanup_cb(struct prot_tran_handler *phand);
-static void prot_txn_res_tran_done_cb(struct prot_main *pmain, struct prot_tran_handler *phand);
-
-// Handler callbacks fot transaction request receiver
-static void prot_txn_res_recv_cleanup_cb(struct prot_recv_handler *phand);
-static void prot_txn_res_recv_handle_cb(struct prot_main *pmain, struct prot_recv_handler *phand);
-
-// Allocate new prot transaction response header
-struct prot_txn_res * prot_txn_res_new(void) {
-    struct prot_txn_res *msg;
-    debug("Creating transaction response message object");
-
-    msg = safe_malloc(sizeof(struct prot_txn_res), 
-        "Failed to allocate transaction response msg");
-
-    msg->htran.buffer = evbuffer_new();
-    return msg;
+// Callback functions
+static void res_tran_cleanup(struct prot_tran_handler *phand) {
+    struct prot_txn_res *msg = phand->msg;
+    prot_txn_res_free(msg);
 }
 
-// Free given transaction response header
-void prot_txn_res_free(struct prot_txn_res *msg) {
-    evbuffer_free(msg->htran.buffer);
-    free(msg);
-}
-
-// Prepare transsion handler for given message
-struct prot_tran_handler * prot_txn_res_htran(struct prot_txn_res *msg) {
-    struct prot_tran_handler *htran = &(msg->htran);
-    debug("Generating transmission handler for transaction response");
-
-    htran->msg = msg;
-    htran->msg_code = PROT_TRANSACTION_RESPONSE;
-    htran->done_cb = prot_txn_res_tran_done_cb;
-    htran->cleanup_cb = prot_txn_res_tran_cleanup_cb;
+static void res_tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand) {
+    struct prot_txn_res *msg = phand->msg;
+    debug("Preparing txn res transmission");
 
     // Generate random transaction id
     if (RAND_bytes(msg->txn_id, TRANSACTION_ID_LEN) != 1) {
@@ -152,32 +104,11 @@ struct prot_tran_handler * prot_txn_res_htran(struct prot_txn_res *msg) {
             ERR_error_string(ERR_get_error(), NULL));
     }
 
-    evbuffer_add(htran->buffer, prot_header(PROT_TRANSACTION_RESPONSE), PROT_HEADER_LEN);
-    evbuffer_add(htran->buffer, msg->txn_id, TRANSACTION_ID_LEN);
-    return htran;
+    evbuffer_add(phand->buffer, prot_header(PROT_TRANSACTION_RESPONSE), PROT_HEADER_LEN);
+    evbuffer_add(phand->buffer, msg->txn_id, TRANSACTION_ID_LEN);
 }
 
-// Prepare receive for given message
-struct prot_recv_handler * prot_txn_res_hrecv(struct prot_txn_res *msg) {
-    struct prot_recv_handler *hrecv = &(msg->hrecv);
-    debug("Generating receive handler for transaction response");
-
-    hrecv->msg = msg;
-    hrecv->msg_code = PROT_TRANSACTION_RESPONSE;
-    hrecv->handle_cb = prot_txn_res_recv_handle_cb;
-    hrecv->cleanup_cb = prot_txn_res_recv_cleanup_cb;
-    hrecv->require_transaction = 0;
-
-    return hrecv;
-}
-
-// Callback functions
-static void prot_txn_res_tran_cleanup_cb(struct prot_tran_handler *phand) {
-    struct prot_txn_res *msg = phand->msg;
-    prot_txn_res_free(msg);
-}
-
-static void prot_txn_res_tran_done_cb(struct prot_main *pmain, struct prot_tran_handler *phand) {
+static void res_tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_txn_res *msg = phand->msg;
     debug("Transaction response transmission finished");
 
@@ -185,12 +116,12 @@ static void prot_txn_res_tran_done_cb(struct prot_main *pmain, struct prot_tran_
     memcpy(pmain->transaction_id, msg->txn_id, TRANSACTION_ID_LEN);
 }
 
-static void prot_txn_res_recv_cleanup_cb(struct prot_recv_handler *phand) {
+static void res_recv_cleanup(struct prot_recv_handler *phand) {
     struct prot_txn_res *msg = phand->msg;
     prot_txn_res_free(msg);
 } 
 
-static void prot_txn_res_recv_handle_cb(struct prot_main *pmain, struct prot_recv_handler *phand) {
+static void res_recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct evbuffer *buff;
     debug("Received transaction response");
 
@@ -201,6 +132,36 @@ static void prot_txn_res_recv_handle_cb(struct prot_main *pmain, struct prot_rec
 
     evbuffer_drain(buff, PROT_HEADER_LEN);
     evbuffer_remove(buff, pmain->transaction_id, TRANSACTION_ID_LEN);
-    pmain->tran_enabled = 1;
+    prot_main_tran_enable(pmain, 1);
     pmain->current_recv_done = 1;
+}
+
+// Allocate new prot transaction response header
+struct prot_txn_res * prot_txn_res_new(void) {
+    struct prot_txn_res *msg;
+    debug("Creating transaction response message object");
+
+    msg = safe_malloc(sizeof(struct prot_txn_res), 
+        "Failed to allocate transaction response msg");
+
+    msg->htran.msg = msg;
+    msg->htran.msg_code = PROT_TRANSACTION_RESPONSE;
+    msg->htran.done_cb = res_tran_done;
+    msg->htran.setup_cb = res_tran_setup;
+    msg->htran.cleanup_cb = res_tran_cleanup;
+    msg->htran.buffer = evbuffer_new();
+
+    msg->hrecv.msg = msg;
+    msg->hrecv.msg_code = PROT_TRANSACTION_RESPONSE;
+    msg->hrecv.handle_cb = res_recv_handle;
+    msg->hrecv.cleanup_cb = res_recv_cleanup;
+    msg->hrecv.require_transaction = 0;
+
+    return msg;
+}
+
+// Free given transaction response header
+void prot_txn_res_free(struct prot_txn_res *msg) {
+    evbuffer_free(msg->htran.buffer);
+    free(msg);
 }
