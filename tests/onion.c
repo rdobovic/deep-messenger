@@ -5,7 +5,7 @@
 
 int main() {
     int v = 0;
-    uint8_t onion_key[ONION_KEY_LEN + 1];
+    uint8_t onion_key[ONION_PUB_KEY_LEN + 1];
     debug_set_fp(stdout);
 
     v = onion_address_valid(ONION_ADDRESS);

@@ -7,7 +7,7 @@
 #include <openssl/err.h>
 #include <openssl/rsa.h>
 
-#define MAX_BUFFER 5000
+#define MAX_BUFFER 270
 
 
 int main(void) {
@@ -22,30 +22,15 @@ int main(void) {
 
     debug("Openssl start");
 
-
     EVP_PKEY *pkey = NULL;
     EVP_PKEY_CTX *ctx = NULL;
 
-    /*
-    // Create new rsa key context
-    if (!(ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL)))
-        debug("Context gen failed");
-
-    // Generate new keypair
-    if (!EVP_PKEY_keygen_init(ctx))
-        debug("Keygen init failed");
-
-    // TODO: 4096bit
-    if (!EVP_PKEY_keygen(ctx, &pkey))
-        debug("Keygen failed");
-    */
-
-    pkey = EVP_RSA_gen(4096);
+    pkey = EVP_RSA_gen(2048);
 
     // Create new encoder context for encoding RSA pub key to DER
     OSSL_ENCODER_CTX *encctx;
 
-    if (!(encctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER", NULL, NULL)))
+    if (!(encctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_PUBLIC_KEY, "DER", NULL, NULL)))
         debug("Failed to create encoder context");
 
     // Encode data to char array
@@ -63,7 +48,7 @@ int main(void) {
     pkd_len = MAX_BUFFER - pkd_len;
     const unsigned char *pkd_ptr2 = pub_key_der;
 
-    if (!(decctx = OSSL_DECODER_CTX_new_for_pkey(&public_key, "DER", NULL, "RSA", EVP_PKEY_KEYPAIR, NULL, NULL)))
+    if (!(decctx = OSSL_DECODER_CTX_new_for_pkey(&public_key, "DER", NULL, "RSA", EVP_PKEY_PUBLIC_KEY, NULL, NULL)))
         debug("Failed to create decoder context");
 
     // Decode key from char array

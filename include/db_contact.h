@@ -18,12 +18,13 @@ struct db_contact {
     // Current friend status (active, pending incomming/outgoing)
     enum db_contact_status status;
     // User nickname
+    int nickname_len;
     char nickname[CLIENT_NICK_MAX_LEN + 1];
     // Onion address string
     char onion_address[ONION_ADDRESS_LEN + 1];
     
     // Key extracted from onion address string
-    uint8_t onion_pub_key[ONION_KEY_LEN];
+    uint8_t onion_pub_key[ONION_PUB_KEY_LEN];
 
     // Mailbox data for given contact
     int has_mailbox;
@@ -63,7 +64,7 @@ void db_contact_refresh(sqlite3 *db, struct db_contact *cont);
 // Get contact by their local ID
 struct db_contact * db_contact_get_by_pk(sqlite3 *db, int id, struct db_contact *dest);
 // Get contact by ther onion address
-struct db_contact * db_contact_get_by_onion(sqlite3 *db, char *onion_address, struct db_contact *dest);
+struct db_contact * db_contact_get_by_onion(sqlite3 *db, const char *onion_address, struct db_contact *dest);
 // Get contact by ther remote signing key public
 struct db_contact * db_contact_get_by_rsk_pub(sqlite3 *db, uint8_t *key, struct db_contact *dest);
 
@@ -74,5 +75,8 @@ struct db_contact ** db_contact_get_all(sqlite3 *db, int *n);
 
 // Free contact list fetched using db_contact_get_all()
 void db_contact_free_all(struct db_contact **conts, int n);
+
+// Extract public key from stored onion address
+void db_contact_onion_extract_key(struct db_contact *cont);
 
 #endif

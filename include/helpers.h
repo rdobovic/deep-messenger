@@ -4,6 +4,9 @@
 // Return smaller number
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
+// Return larger number
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+
 // Draw box (border) on the window using and apply given
 // attributes to the border
 #define box_attr(win, attr) \

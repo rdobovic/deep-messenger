@@ -8,6 +8,7 @@
 #include <sys_memory.h>
 #include <helpers.h>
 #include <constants.h>
+#include <debug.h>
 
 // Create new empty contact object
 struct db_contact * db_contact_new(void) {
@@ -57,7 +58,7 @@ void db_contact_save(sqlite3 *db, struct db_contact *cont) {
         SQLITE_OK != sqlite3_bind_int(stmt, 1, cont->status) ||
         SQLITE_OK != sqlite3_bind_text(stmt, 2, cont->nickname, -1, NULL) ||
         SQLITE_OK != sqlite3_bind_text(stmt, 3, cont->onion_address, ONION_ADDRESS_LEN, NULL)       ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 4, cont->onion_pub_key, ONION_KEY_LEN, NULL)           ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 4, cont->onion_pub_key, ONION_PUB_KEY_LEN, NULL)           ||
         SQLITE_OK != sqlite3_bind_int(stmt, 5, cont->has_mailbox)                                   ||
         SQLITE_OK != sqlite3_bind_blob(stmt, 6, cont->mailbox_id, MAILBOX_ID_LEN, NULL)  ||
         SQLITE_OK != sqlite3_bind_text(stmt, 7, cont->mailbox_onion, ONION_ADDRESS_LEN, NULL)       ||
@@ -72,7 +73,7 @@ void db_contact_save(sqlite3 *db, struct db_contact *cont) {
     }
 
     if (cont->id > 0) {
-        if (sqlite3_bind_int(stmt, 11, cont->id) != SQLITE_OK)
+        if (sqlite3_bind_int(stmt, 14, cont->id) != SQLITE_OK)
             sys_db_crash(db, "Failed to bind contact id");
     }
 
@@ -106,6 +107,7 @@ static struct db_contact * db_contact_process_row(sqlite3 *db, sqlite3_stmt *stm
     // Contact status
     cont->status = sqlite3_column_int(stmt, 1);
     // Nickname
+    cont->nickname_len = sqlite3_column_bytes(stmt, 2);
     memcpy(cont->nickname, sqlite3_column_text(stmt, 2),
         min(CLIENT_NICK_MAX_LEN, sqlite3_column_bytes(stmt, 2)));
     // Onion address
@@ -113,7 +115,7 @@ static struct db_contact * db_contact_process_row(sqlite3 *db, sqlite3_stmt *stm
         min(ONION_ADDRESS_LEN, sqlite3_column_bytes(stmt, 3)));
     // Onion key
     memcpy(cont->onion_pub_key, sqlite3_column_blob(stmt, 4),
-        min(ONION_KEY_LEN, sqlite3_column_bytes(stmt, 4)));
+        min(ONION_PUB_KEY_LEN, sqlite3_column_bytes(stmt, 4)));
 
     // Indicates that contact has mailbox
     cont->has_mailbox = sqlite3_column_int(stmt, 5);
@@ -166,7 +168,7 @@ struct db_contact * db_contact_get_by_pk(sqlite3 *db, int id, struct db_contact 
 }
 
 // Get contact by ther onion address
-struct db_contact * db_contact_get_by_onion(sqlite3 *db, char *onion_address, struct db_contact *dest) {
+struct db_contact * db_contact_get_by_onion(sqlite3 *db, const char *onion_address, struct db_contact *dest) {
     sqlite3_stmt *stmt;
     struct db_contact *cont;
 
@@ -273,4 +275,8 @@ void db_contact_delete(sqlite3 *db, struct db_contact *cont) {
         sys_db_crash(db, "Failed to delete database contact (step)");
 
     sqlite3_finalize(stmt);
+}
+
+void db_contact_onion_extract_key(struct db_contact *cont) {
+    onion_extract_key(cont->onion_address, cont->onion_pub_key);
 }

@@ -64,8 +64,8 @@ int main(void) {
     strcpy(cont->mailbox_onion, "i4mcwgorejxtforxrd7dsf73hsiiphhlgxxz3aeuef3hixdcv4vg3bid.onion");
     db_contact_save(dbg, cont);
 
-    //strcpy(cont->nickname, "rdobovic122");
-    //db_contact_save(dbg, cont);
+    strcpy(cont->nickname, "rdobovic122");
+    db_contact_save(dbg, cont);
 
     debug("nick: %s", cont->nickname);
 
@@ -93,18 +93,19 @@ int main(void) {
     db_message_free(msg);
     db_contact_free(cont);
 
-    cont = db_contact_get_by_pk(dbg, 3, NULL);
+    cont = db_contact_get_by_pk(dbg, 8, NULL);
     msg = db_message_get_last(dbg, cont, NULL);
 
-    if (cont && msg)
+    if (cont && msg) {
         debug("[%s] %s", cont->nickname, msg->body_text);
+    }
 
     if (cont)
         db_contact_delete(dbg, cont);
 
     db_contact_free_all(conts, conts_n);
 
-    acc = db_mb_account_new();
+    /*acc = db_mb_account_new();
 
     acc->mailbox_id[0] = 0x25;
     db_mb_account_save(dbg, acc);
@@ -159,7 +160,7 @@ int main(void) {
 
     db_mb_account_free(acc);
     db_mb_contact_free(mcont);
-    db_mb_message_free(mmsg);
+    db_mb_message_free(mmsg);*/
 
     sqlite3_close(dbg);
 }

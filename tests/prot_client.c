@@ -5,10 +5,12 @@
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 
+#include <db_init.h>
 #include <debug.h>
 #include <constants.h>
 #include <prot_main.h>
 #include <prot_transaction.h>
+#include <prot_friend_req.h>
 #include <prot_ack.h>
 #include <base32.h>
 
@@ -32,9 +34,7 @@ int main() {
     struct bufferevent *bev;
     struct prot_main *pmain;
     struct prot_txn_req *treq;
-
-    struct prot_ack_ed25519 *ack;
-    uint8_t priv_key[ED25519_PRIV_KEY_LEN];
+    struct prot_friend_req *freq;
 
     base = event_base_new();
 
@@ -50,16 +50,17 @@ int main() {
         return 1;
     }
 
-    pmain = prot_main_new(base);
+    db_init_global("deep_messenger2.db");
+
+    pmain = prot_main_new(base, dbg);
     prot_main_assign(pmain, bev);
     prot_main_setcb(pmain, pmain_done_cb, NULL, NULL);
 
     treq = prot_txn_req_new();
     prot_main_push_tran(pmain, &(treq->htran));
 
-    base32_decode(PRIV_KEY, strlen(PRIV_KEY), priv_key);
-    ack = prot_ack_ed25519_new(PROT_ACK_SIGNATURE, NULL, priv_key, ack_cb, NULL);
-    prot_main_push_tran(pmain, &(ack->htran));
+    freq = prot_friend_req_new(dbg, "scddeoyfwo2nbioc55fd5hys4voln4qbm3xu65ffhhvzl6rnv7h2aeid.onion");
+    prot_main_push_tran(pmain, &(freq->htran));
 
     event_base_dispatch(base);
     return 0;

@@ -27,6 +27,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
         ack->cb(1, ack->cbarg);
 }
 
+// Fill ACK buffer
 static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_ack_ed25519 *ack = phand->msg;
 

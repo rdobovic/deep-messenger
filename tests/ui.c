@@ -110,15 +110,15 @@ int ui_init(void) {
     debug("Generating and attaching menu comp");
 
     menu_comp = ui_menu_new();
-    ui_menu_add(menu_comp, 0, L"Hello world 01", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 1, L"Hello world 02", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 2, L"Hello world 03 AAAAAAAAAAAAAAAAAAAAAAA", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 3, L"Hello world 04", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 4, L"Hello world 05", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 5, L"Hello world 06", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 6, L"Hello world 07", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 7, L"Hello world 08", print_something_menu, NULL);
-    ui_menu_add(menu_comp, 8, L"Hello world 09", print_something_menu, NULL);
+    ui_menu_add(menu_comp, 0, L"Config shell", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 1, L"Hello world 02", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 2, L"Hello world 03 AAAAAAAAAAAAAAAAAAAAAAA", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 3, L"Hello world 04", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 4, L"Hello world 05", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 5, L"Hello world 06", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 6, L"Hello world 07", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 7, L"Hello world 08", print_something_menu, NULL);
+    //ui_menu_add(menu_comp, 8, L"Hello world 09", print_something_menu, NULL);
     ui_menu_attach(menu_comp, settings);
 
     debug("Adding manager to the stack");

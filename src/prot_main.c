@@ -1,3 +1,4 @@
+#include <sqlite3.h>
 #include <prot_main.h>
 #include <sys_memory.h>
 #include <socks5.h>
@@ -9,6 +10,7 @@
 #include <event2/bufferevent.h>
 
 #include <debug.h>
+#include <prot_friend_req.h>
 #include <prot_transaction.h>
 
 // Internal bufferevent callbacks
@@ -39,7 +41,7 @@ static void prot_main_done_check(struct prot_main *pmain) {
 }
 
 // Allocate new main protocol object
-struct prot_main *prot_main_new(struct event_base *base) {
+struct prot_main *prot_main_new(struct event_base *base, sqlite3 *db) {
     struct prot_main *pmain;
 
     pmain = safe_malloc(sizeof(struct prot_main), "Failed to allocate memory for prot_main struct");
@@ -47,7 +49,8 @@ struct prot_main *prot_main_new(struct event_base *base) {
 
     // Everything is fine
     pmain->status = PROT_STATUS_OK;
-    // Set event base
+    // Set event base and databse
+    pmain->db = db;
     pmain->event_base = base;
 
     // Allocate queues
@@ -227,13 +230,13 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
 
             message_code = header[1];
 
-            debug("Got new message with code %d", message_code);
+            debug("Got new message with code %02x", message_code);
 
             // If queue is empty try to get handler for given message type
             if (queue_is_empty(pmain->recv_q)) {
                 void *msg_object;
 
-                msg_object = prot_handler_autogen(message_code, &phand, NULL);
+                msg_object = prot_handler_autogen(message_code, &phand, NULL, pmain->db);
 
                 if (msg_object == NULL) {
                     prot_main_fail(pmain, PROT_ERR_INVALID_MSG);
@@ -455,12 +458,25 @@ void prot_main_tran_enable(struct prot_main *pmain, int yes) {
 void *prot_handler_autogen(
     enum prot_message_codes code,
     struct prot_recv_handler **phand_recv,
-    struct prot_tran_handler **phand_tran
+    struct prot_tran_handler **phand_tran,
+    sqlite3 *db
 ) {
-    if (code == PROT_TRANSACTION_REQUEST)
-    {
+    if (code == PROT_TRANSACTION_REQUEST) {
         struct prot_txn_req *msg;
         msg = prot_txn_req_new();
+
+        if (phand_recv)
+            *phand_recv = &(msg->hrecv);
+
+        if (phand_tran)
+            *phand_tran = &(msg->htran);
+
+        return msg;
+    }
+
+    if (code == PROT_FRIEND_REQUEST) {
+        struct prot_friend_req *msg;
+        msg = prot_friend_req_new(db, NULL);
 
         if (phand_recv)
             *phand_recv = &(msg->hrecv);

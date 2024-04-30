@@ -11,8 +11,6 @@ int db_options_is_defined(sqlite3 *db, const char *key, enum db_options_types ty
     int value;
     sqlite3_stmt *stmt;
 
-    debug("isset");
-
     // Define SQL query for each option type
     const char *sql[] = {
         // 0 => DB_OPTION_INT
@@ -84,7 +82,7 @@ void db_options_set_int(sqlite3 *db, const char *key, int value) {
 }
 
 // Fetch the option of binary object (BLOB) type
-int db_options_get_bin(sqlite3 *db, const char *key, void *value, size_t value_len) {
+int db_options_get_bin(sqlite3 *db, const char *key, void *value, int value_len) {
     sqlite3_stmt *stmt;
     size_t db_value_len;
     const void *db_value;
@@ -108,7 +106,7 @@ int db_options_get_bin(sqlite3 *db, const char *key, void *value, size_t value_l
     return db_value_len;
 }
 
-void db_options_set_bin(sqlite3 *db, const char *key, const void *value, size_t value_len) {
+void db_options_set_bin(sqlite3 *db, const char *key, const void *value, int value_len) {
     const char *sql;
     sqlite3_stmt *stmt;
 
@@ -133,7 +131,7 @@ void db_options_set_bin(sqlite3 *db, const char *key, const void *value, size_t 
 }
 
 // Fetch the option of text type
-int db_options_get_text(sqlite3 *db, const char *key, char *value, size_t value_len) {
+int db_options_get_text(sqlite3 *db, const char *key, char *value, int value_len) {
     sqlite3_stmt *stmt;
     size_t db_value_len;
     const char *db_value;
@@ -160,12 +158,14 @@ int db_options_get_text(sqlite3 *db, const char *key, char *value, size_t value_
     return db_value_len;
 }
 
-void db_options_set_text(sqlite3 *db, const char *key, const char *value, size_t value_len) {
+void db_options_set_text(sqlite3 *db, const char *key, const char *value, int value_len) {
     const char *sql;
     sqlite3_stmt *stmt;
 
     const char sql_update[] = "UPDATE options SET text_value = ? WHERE key = ?";
     const char sql_insert[] = "INSERT INTO options (text_value, key) VALUES (?, ?)";
+
+    value_len = strlen(value);
 
     sql = db_options_is_defined(db, key, DB_OPTIONS_TEXT) ? sql_update : sql_insert;
 

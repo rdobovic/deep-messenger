@@ -33,7 +33,7 @@
 // A key supplied to mailbox on registration (ED25519)
 #define MAILBOX_ACCOUNT_KEY_PUB_LEN  32
 // Used for signing when communicating with mailbox (ED25519)
-#define MAILBOX_ACCOUNT_KEY_PRIV_LEN 64
+#define MAILBOX_ACCOUNT_KEY_PRIV_LEN 32
 
 /**
  * Client and 
@@ -50,10 +50,10 @@
 
 // Key pair for signing (ED25519), exchanged during friend request
 #define CLIENT_SIG_KEY_PUB_LEN  32
-#define CLIENT_SIG_KEY_PRIV_LEN 64
+#define CLIENT_SIG_KEY_PRIV_LEN 32
 
 // Key pair for encryption (RSA), exchanged during friend request
-#define CLIENT_ENC_KEY_PUB_LEN  526
-#define CLIENT_ENC_KEY_PRIV_LEN 2348
+#define CLIENT_ENC_KEY_PUB_LEN  270
+#define CLIENT_ENC_KEY_PRIV_LEN 1192
 
 #endif

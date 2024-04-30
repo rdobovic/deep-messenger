@@ -3,6 +3,7 @@
 
 #include <queue.h>
 #include <stdint.h>
+#include <sqlite3.h>
 #include <sys/socket.h>
 #include <event2/event.h>
 #include <event2/buffer.h>
@@ -109,6 +110,8 @@ struct prot_main {
     int bev_ready;                  // Set to 1 once bufferevent is ready
     struct event_base *event_base;  // Event base
 
+    sqlite3 *db;                    // Database, used by some handlers on autogen
+
     int transaction_started;                          // Indicates if transaction has started
     uint8_t transaction_id[TRANSACTION_ID_LEN];  // Transaction ID associated with this connection
 
@@ -127,7 +130,7 @@ struct prot_main {
 };
 
 // Allocate new main protocol object
-struct prot_main * prot_main_new(struct event_base *base);
+struct prot_main *prot_main_new(struct event_base *base, sqlite3 *db);
 
 // Call cleanup for all in the queue and free main protocol object
 void prot_main_free(struct prot_main *pmain);
@@ -178,10 +181,11 @@ void prot_main_tran_enable(struct prot_main *pmain, int yes);
 // Allocate new object for given message type and set given pointers
 // to handlers for that message, if pointers are NULL they are not set
 // function returns pointer to message object
-void * prot_handler_autogen(
+void *prot_handler_autogen(
     enum prot_message_codes code,
     struct prot_recv_handler **phand_recv,
-    struct prot_tran_handler **phand_tran
+    struct prot_tran_handler **phand_tran,
+    sqlite3 *db
 );
 
 // Convert given error code to human readable error

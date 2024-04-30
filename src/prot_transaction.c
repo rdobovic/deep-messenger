@@ -132,6 +132,7 @@ static void res_recv_handle(struct prot_main *pmain, struct prot_recv_handler *p
 
     evbuffer_drain(buff, PROT_HEADER_LEN);
     evbuffer_remove(buff, pmain->transaction_id, TRANSACTION_ID_LEN);
+    pmain->transaction_started = 1;
     prot_main_tran_enable(pmain, 1);
     pmain->current_recv_done = 1;
 }
