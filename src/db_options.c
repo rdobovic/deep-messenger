@@ -57,6 +57,7 @@ int db_options_get_int(sqlite3 *db, const char *key) {
     return value;
 }
 
+// Set value of in database option
 void db_options_set_int(sqlite3 *db, const char *key, int value) {
     const char *sql;
     sqlite3_stmt *stmt;

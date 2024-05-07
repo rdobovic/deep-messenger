@@ -15,8 +15,8 @@ struct prot_message {
     struct db_message *dbmsg_client;
     struct db_mb_message *dbmsg_mailbox;
 
-    struct prot_tran_handler *htran;
-    struct prot_recv_handler *hrecv;
+    struct prot_tran_handler htran;
+    struct prot_recv_handler hrecv;
 };
 
 // Allocate new object for message handler (actual text message)

@@ -53,6 +53,19 @@ struct prot_message * prot_message_client_new(sqlite3 *db, int dry_run, struct d
     msg->db = db;
     msg->dry_run = dry_run;
     msg->dbmsg_client = dbmsg;
+
+    msg->hrecv.msg = msg;
+    msg->hrecv.msg_code = PROT_MESSAGE_CONTAINER;
+    msg->hrecv.require_transaction = 1;
+    msg->hrecv.handle_cb = recv_handle;
+    msg->hrecv.cleanup_cb = recv_cleanup;
+
+    msg->htran.msg = msg;
+    msg->htran.msg_code = PROT_MESSAGE_CONTAINER;
+    msg->htran.buffer = evbuffer_new();
+    msg->htran.done_cb = tran_done;
+    msg->htran.setup_cb = tran_setup;
+    msg->htran.cleanup_cb = tran_cleanup;
 }
 
 // Allocate new object for message handler (actual text message)

@@ -162,11 +162,11 @@ int ed25519_buffer_validate(struct evbuffer *buff, size_t len, uint8_t *pub_key)
 // returns 1 on success and 0 on failure
 int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbuffer *enc) {
     int i, temp_len, is_err = 0;
-    uint32_t encrypted_len;
+    uint32_t encrypted_len; // Ciphertext length
 
-    int ek_len = 1;
+    int ek_len = 1;     // Symetric encrypted key
     uint8_t *ek = NULL;
-    uint8_t *iv = NULL;
+    uint8_t *iv = NULL; // AES IV number
 
     EVP_PKEY *pkey = NULL;
     EVP_CIPHER_CTX *cipctx = NULL;
@@ -225,16 +225,12 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
     vec_enc.iov_len = temp_len;
     evbuffer_commit_space(enc, &vec_enc, 1);
 
+    // Add keys to the buffer
     evbuffer_add(enc, ek, ek_len);
-    debug("STORING EK: %02x%02x", ek[0], ek[1]);
     evbuffer_add(enc, iv, EVP_CIPHER_get_iv_length(EVP_aes_256_cbc()));
-    debug("STORING iv: %02x%02x", iv[0], iv[1]);
 
     // Free everything
     err:
-    if (is_err) {
-        debug("Error encrypt");
-    }
     free(iv);
     free(ek);
     free(vec_plain);
@@ -244,7 +240,14 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
 }
 
 // Takes buffer encrypted by rsa_buffer_encrypt function and decrypts it into plain buffer
-// using provided RSA 2048bit key in DER format, returns 1 on success and 0 on failure
+// using provided RSA 2048bit key in DER format, returns 1 on success and 0 on failure,
+// expects folowing format in the input buffer:
+//
+//  >> DATA LEN (4 bytes)
+//  >> DATA
+//  >> DATA KEY (AES 256 bytes)
+//  >> DATA IV  (16 bytes)
+//
 int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct evbuffer *plain_buff) {
     int i, is_err;
     size_t len;
