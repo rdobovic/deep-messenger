@@ -13,6 +13,7 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/encoder.h>
+#include <helpers_crypto.h>
 
 // Called when ACK message is received (or cleaned up)
 static void ack_received_cb(int ack_success, void *arg) {
@@ -45,64 +46,19 @@ static void tran_cleanup(struct prot_tran_handler *phand) {
 
 // Called to build friend request message and put it into buffer
 static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand) {
-    size_t len;
-    uint8_t *key_ptr;
     uint8_t nick_len;
     char nick[CLIENT_NICK_MAX_LEN + 1];
     struct prot_friend_req *msg = phand->msg;
 
-    EVP_PKEY *pkey = NULL;
-    EVP_PKEY_CTX *keyctx;
-
-    OSSL_ENCODER_CTX *encctx;
-
-    char onion_address[ONION_ADDRESS_LEN];
-    char mb_onion_address[ONION_ADDRESS_LEN];
-    uint8_t mb_id[MAILBOX_ID_LEN];
-    uint8_t onion_priv_key[ONION_PRIV_KEY_LEN];
+    char onion_address[ONION_ADDRESS_LEN];      // My onion address
+    char mb_onion_address[ONION_ADDRESS_LEN];   // My mailbox address
+    uint8_t mb_id[MAILBOX_ID_LEN];              // My mailbox ID
+    uint8_t onion_priv_key[ONION_PRIV_KEY_LEN]; // My onion private key (to sign the message)
 
     // Generate ED25519 keypair
-    if (
-        !(keyctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL)) ||
-        !EVP_PKEY_keygen_init(keyctx) ||
-        !EVP_PKEY_generate(keyctx, &pkey)
-    )
-        sys_openssl_crash("Failed to generate ED25519 in friend request");
-
-    len = CLIENT_SIG_KEY_PUB_LEN;
-    if (!EVP_PKEY_get_raw_public_key(pkey, msg->friend->local_sig_key_pub, &len))
-        sys_openssl_crash("Failed to extract public ED25519 key in friend request");
-
-    len = CLIENT_SIG_KEY_PRIV_LEN;
-    if (!EVP_PKEY_get_raw_private_key(pkey, msg->friend->local_sig_key_priv, &len))
-        sys_openssl_crash("Failed to extract private ED25519 key in friend request");;
-
-    EVP_PKEY_free(pkey);
-    EVP_PKEY_CTX_free(keyctx);
-
+    ed25519_keygen(msg->friend->local_sig_key_pub, msg->friend->local_sig_key_pub);
     // Generate RSA 2048bit keypair
-    if (!(pkey = EVP_RSA_gen(2048)))
-        sys_openssl_crash("Failed to create RSA keypair in friend request");
-
-    if (!(encctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_PUBLIC_KEY, "DER", NULL, NULL)))
-        sys_openssl_crash("Failed to create DER encoder for public key in friend req");
-
-    len = CLIENT_ENC_KEY_PUB_LEN;
-    key_ptr = msg->friend->local_enc_key_pub;
-    if (!OSSL_ENCODER_to_data(encctx, &key_ptr, &len))
-        sys_openssl_crash("Failed to encode RSA public key to DER");
-    OSSL_ENCODER_CTX_free(encctx);
-
-    if (!(encctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER", NULL, NULL)))
-        sys_openssl_crash("Failed to create DER encoder for private key in friend req");
-
-    len = CLIENT_ENC_KEY_PRIV_LEN;
-    key_ptr = msg->friend->local_enc_key_priv;
-    if (!OSSL_ENCODER_to_data(encctx, &key_ptr, &len))
-        sys_openssl_crash("Failed to encode RSA private key to DER");
-
-    OSSL_ENCODER_CTX_free(encctx);
-    EVP_PKEY_free(pkey);
+    rsa_2048bit_keygen(msg->friend->local_enc_key_pub, msg->friend->local_enc_key_pub);
 
     // Fetch data from the database
     db_options_get_text(msg->db, "onion_address", onion_address, ONION_ADDRESS_LEN);

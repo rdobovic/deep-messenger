@@ -3,11 +3,6 @@
 
 #define SYS_CRASH_MAX_CALLBACKS 16
 
-#include <openssl/err.h>
-// This should be moved somewhere else in the future
-#define sys_openssl_crash(desc) \
-    sys_crash("Openssl", "%s, with error: %s", (desc), ERR_error_string(ERR_get_error(), NULL))
-
 // Callback type to call on crash
 typedef void (*sys_crash_cb)(void *attr);
 

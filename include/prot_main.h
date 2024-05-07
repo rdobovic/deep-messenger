@@ -104,6 +104,7 @@ struct prot_main {
     prot_main_done_cb done_cb;   // Called when all messages are processed and the transmition queue is empty
     prot_main_close_cb close_cb; // Called when connection is closed
 
+    enum prot_modes mode;
     enum prot_status_codes status;
 
     struct bufferevent *bev;        // Bufferevent for this connection

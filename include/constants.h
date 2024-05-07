@@ -54,6 +54,7 @@
 
 // Key pair for encryption (RSA), exchanged during friend request
 #define CLIENT_ENC_KEY_PUB_LEN  270
-#define CLIENT_ENC_KEY_PRIV_LEN 1192
+//#define CLIENT_ENC_KEY_PRIV_LEN 1192
+#define CLIENT_ENC_KEY_PRIV_LEN 1400
 
 #endif

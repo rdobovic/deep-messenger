@@ -4,7 +4,6 @@
 #include <helpers.h>
 #include <sys_process.h>
 
-
 #define MAX_LINE 511
 
 #define TOR_PATH "/bin/tor"
