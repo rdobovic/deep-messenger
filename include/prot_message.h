@@ -7,11 +7,19 @@
 #include <db_mb_message.h>
 #include <prot_main.h>
 
+enum prot_message_to {
+    PROT_MESSAGE_TO_CLIENT,
+    PROT_MESSAGE_TO_MAILBOX
+};
+
 struct prot_message {
     // If set to 1 hander will not try to send/wait ACK for message
     // it will just process it and store it
     int dry_run;
     sqlite3 *db;
+    // Used to specify if message if we are sending message to the
+    // or the client
+    enum prot_message_to to;
     struct db_message *dbmsg_client;
     struct db_mb_message *dbmsg_mailbox;
 
@@ -20,7 +28,7 @@ struct prot_message {
 };
 
 // Allocate new object for message handler (actual text message)
-struct prot_message * prot_message_client_new(sqlite3 *db, int dry_run, struct db_message *dbmsg);
+struct prot_message * prot_message_client_new(sqlite3 *db, int dry_run, enum prot_message_to to, struct db_message *dbmsg);
 
 // Allocate new object for message handler (actual text message)
 struct prot_message * prot_message_mailbox_new(sqlite3 *db, int dry_run, struct db_mb_message *dbmsg);

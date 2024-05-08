@@ -7,6 +7,7 @@
 #include <sqlite3.h>
 #include <prot_ack.h>
 #include <prot_friend_req.h>
+#include <prot_main.h>
 #include <buffer_crypto.h>
 #include <event2/buffer.h>
 #include <debug.h>
@@ -16,7 +17,7 @@
 #include <helpers_crypto.h>
 
 // Called when ACK message is received (or cleaned up)
-static void ack_received_cb(int ack_success, void *arg) {
+static void ack_received_cb(int ack_success, struct prot_main *pmain, void *arg) {
     struct prot_friend_req *msg = arg;
 
     if (ack_success) {
@@ -91,7 +92,7 @@ static void recv_cleanup(struct prot_recv_handler *phand) {
     prot_friend_req_free(msg);
 }
 
-static void ack_sent_cb(int ack_success, void *arg) {
+static void ack_sent_cb(int ack_success, struct prot_main *pmain, void *arg) {
     struct prot_friend_req *msg = arg;
 
     if (ack_success) {

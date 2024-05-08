@@ -47,6 +47,10 @@ void db_message_save(sqlite3 *db, struct db_message *msg) {
 
     sql = (msg->id > 0) ? sql_update : sql_insert;
 
+    // RECV is virtual type, it should never be saved to the database
+    if (msg->type == DB_MESSAGE_RECV)
+        return;
+
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to save message into database");
 

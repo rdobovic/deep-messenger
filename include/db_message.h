@@ -12,17 +12,21 @@ enum db_message_types {
     DB_MESSAGE_TEXT = 0x01,
     DB_MESSAGE_NICK = 0x02,
     DB_MESSAGE_MBOX = 0x03,
+    
+    // Virtual type, it is only sent but never saved
+    // to the database
+    DB_MESSAGE_RECV = 0x04,
 };
 
 enum db_message_status {
     // Messages waiting to me sent
-    DB_MESSAGE_UNDELIVERED,
+    DB_MESSAGE_STATUS_UNDELIVERED,
     // For messages I sent
-    DB_MESSAGE_SENT,
-    DB_MESSAGE_SENT_CONFIRMED,
+    DB_MESSAGE_STATUS_SENT,
+    DB_MESSAGE_STATUS_SENT_CONFIRMED,
     // For messages I received
-    DB_MESSAGE_RECV,
-    DB_MESSAGE_RECV_CONFIRMED,
+    DB_MESSAGE_STATUS_RECV,
+    DB_MESSAGE_STATUS_RECV_CONFIRMED,
 };
 
 enum db_message_sender {
@@ -45,6 +49,8 @@ struct db_message {
 
     int body_nick_len;
     char body_nick[CLIENT_NICK_MAX_LEN];
+
+    uint8_t body_recv_id[MESSAGE_ID_LEN];
 
     uint8_t body_mbox_id[MAILBOX_ID_LEN];
     uint8_t body_mbox_onion[ONION_ADDRESS_LEN + 1];

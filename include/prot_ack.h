@@ -5,7 +5,7 @@
 #include <prot_main.h>
 #include <constants.h>
 
-typedef void (*prot_ack_ed25519_cb)(int ack_success, void *cbarg);
+typedef void (*prot_ack_ed25519_cb)(int ack_success, struct prot_main *pmain, void *cbarg);
 
 struct prot_ack_ed25519 {
     int ack_success;

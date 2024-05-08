@@ -13,7 +13,7 @@ static void tran_cleanup(struct prot_tran_handler *phand) {
     struct prot_ack_ed25519 *ack = phand->msg;
 
     if (!ack->ack_success && ack->cb)
-        ack->cb(0, ack->cbarg);
+        ack->cb(0, NULL, ack->cbarg);
 
     prot_ack_ed25519_free(ack);
 }
@@ -24,7 +24,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 
     ack->ack_success = 1;
     if (ack->cb)
-        ack->cb(1, ack->cbarg);
+        ack->cb(1, pmain, ack->cbarg);
 }
 
 // Fill ACK buffer
@@ -43,7 +43,7 @@ static void recv_cleanup(struct prot_recv_handler *phand) {
     struct prot_ack_ed25519 *ack = phand->msg;
 
     if (!ack->ack_success && ack->cb)
-        ack->cb(0, ack->cbarg);
+        ack->cb(0, NULL, ack->cbarg);
 
     prot_ack_ed25519_free(ack);
 }
@@ -68,7 +68,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
 
     ack->ack_success = 1;
     if (ack->cb)
-        ack->cb(1, ack->cbarg);
+        ack->cb(1, pmain, ack->cbarg);
 
     evbuffer_drain(input, message_len);
     pmain->current_recv_done = 1;

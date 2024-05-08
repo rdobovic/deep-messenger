@@ -152,17 +152,19 @@ int ed25519_buffer_validate(struct evbuffer *buff, size_t len, uint8_t *pub_key)
 }
 
 // Takes RSA 2048bit key in DER format encrypts content of plain buffer and puts it into
-// enc buffer in following format, used for sending it over network
+// enc buffer in following format, used for sending it over network, if enc_len is not NULL
+// it is set to length of of the format
 //
 //  >> DATA LEN (4 bytes)
 //  >> DATA
-//  >> DATA KEY (AES 256 bytes)
+//  >> DATA KEY (AES 32 bytes)
 //  >> DATA IV  (16 bytes)
 //
-// returns 1 on success and 0 on failure
-int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbuffer *enc) {
-    int i, temp_len, is_err = 0;
-    uint32_t encrypted_len; // Ciphertext length
+// returns rsa buffer error code
+enum rsa_buffer_errors rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbuffer *enc, int *enc_len) {
+    int i, temp_len;
+    int err_code = RSA_BUFFER_ERR_NONE; // Set error code to no error
+    uint32_t encrypted_len;             // Ciphertext length
 
     int ek_len = 1;     // Symetric encrypted key
     uint8_t *ek = NULL;
@@ -177,7 +179,7 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
 
     // Decode DER key
     if (!(pkey = rsa_2048bit_pub_key_decode(der_pub_key))) {
-        is_err = 1; goto err;
+        err_code = RSA_BUFFER_ERR_KEY; goto err;
     }
 
     encrypted_len = (evbuffer_get_length(plain) / EVP_CIPHER_block_size(EVP_aes_256_cbc()) + 1) * EVP_CIPHER_block_size(EVP_aes_256_cbc());
@@ -193,7 +195,7 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
         !(cipctx = EVP_CIPHER_CTX_new()) ||
         !EVP_SealInit(cipctx, EVP_aes_256_cbc(), &ek, &ek_len, iv, &pkey, 1)
     ) {
-        is_err = 1; goto err;
+        err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
     }
 
     // Get buffer chunks
@@ -209,9 +211,8 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
         evbuffer_reserve_space(enc, len + EVP_CIPHER_block_size(EVP_aes_256_cbc()), &vec_enc, 1);
         temp_len = vec_enc.iov_len;
         if (!EVP_SealUpdate(cipctx, vec_enc.iov_base, &temp_len, vec_plain[i].iov_base, len)) {
-            is_err = 1; goto err;
+            err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
         }
-        debug("FB: %x", ((uint8_t *)(vec_enc.iov_base))[0]);
         vec_enc.iov_len = temp_len;
         evbuffer_commit_space(enc, &vec_enc, 1);
     }
@@ -220,7 +221,7 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
     evbuffer_reserve_space(enc, EVP_CIPHER_block_size(EVP_aes_256_cbc()), &vec_enc, 1);
     temp_len = vec_enc.iov_len;
     if (!EVP_SealFinal(cipctx, vec_enc.iov_base, &temp_len)) {
-        is_err = 1; goto err;
+        err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
     }
     vec_enc.iov_len = temp_len;
     evbuffer_commit_space(enc, &vec_enc, 1);
@@ -229,6 +230,9 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
     evbuffer_add(enc, ek, ek_len);
     evbuffer_add(enc, iv, EVP_CIPHER_get_iv_length(EVP_aes_256_cbc()));
 
+    if (enc_len)
+        *enc_len = sizeof(encrypted_len) + encrypted_len + ek_len + EVP_CIPHER_get_iv_length(EVP_aes_256_cbc());
+
     // Free everything
     err:
     free(iv);
@@ -236,20 +240,22 @@ int rsa_buffer_encrypt(struct evbuffer *plain, uint8_t *der_pub_key, struct evbu
     free(vec_plain);
     EVP_PKEY_free(pkey);
     EVP_CIPHER_CTX_free(cipctx);
-    return !is_err;
+    return err_code;
 }
 
 // Takes buffer encrypted by rsa_buffer_encrypt function and decrypts it into plain buffer
-// using provided RSA 2048bit key in DER format, returns 1 on success and 0 on failure,
-// expects folowing format in the input buffer:
+// using provided RSA 2048bit key in DER format, returns rsa buffer error code,
+// expects folowing format in the input buffer, if enc_length is not NULL it is set to size of
+// the given format
 //
 //  >> DATA LEN (4 bytes)
 //  >> DATA
 //  >> DATA KEY (AES 256 bytes)
 //  >> DATA IV  (16 bytes)
 //
-int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct evbuffer *plain_buff) {
-    int i, is_err;
+enum rsa_buffer_errors rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct evbuffer *plain_buff, int *enc_len) {
+    int i;
+    int err_code = RSA_BUFFER_ERR_NONE;
     size_t len;
     int len_int;
 
@@ -268,12 +274,6 @@ int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct 
     EVP_PKEY *pkey_priv = NULL;
     EVP_CIPHER_CTX *cipctx = NULL; 
 
-    // Decode DER encoded private key
-    if (!(pkey_priv = rsa_2048bit_priv_key_decode(der_priv_key))) {
-        is_err = 1; goto err;
-        debug("Decode failed");
-    }
-
     // Calculate symetric key and IV length
     ekl = EVP_PKEY_get_size(pkey_priv);
     ivl = EVP_CIPHER_get_iv_length(EVP_aes_256_cbc());
@@ -281,18 +281,34 @@ int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct 
     ek = safe_malloc(ekl, "Failed to allocate EK when decrypting buffer");
     iv = safe_malloc(ivl, "Failed to allocate IV when decrypting buffer");
 
+    if (enc_len)
+        *enc_len = sizeof(encrypted_len) + ekl + ivl;
+
     // If buffer is too small to specify ciphertext length
     if (evbuffer_get_length(enc_buff) < sizeof(encrypted_len)) {
-        is_err = 1; goto err;
+        err_code = RSA_BUFFER_ERR_LENGTH; goto err;
     }
 
     // Get length of cipher text
     evbuffer_copyout(enc_buff, &encrypted_len, sizeof(encrypted_len));
     encrypted_len = ntohl(encrypted_len);
 
+    if (enc_len)
+        *enc_len += encrypted_len;
+
     // If buffer is too small to contain all specified data
     if (evbuffer_get_length(enc_buff) < sizeof(encrypted_len) + encrypted_len + ekl + ivl) {
-        is_err = 1; goto err;
+        err_code = RSA_BUFFER_ERR_LENGTH; goto err;
+    }
+
+    // User just wants to check if length is ok, and it is
+    if (der_priv_key == NULL) {
+        goto err;
+    }
+
+    // Decode DER encoded private key
+    if (!(pkey_priv = rsa_2048bit_priv_key_decode(der_priv_key))) {
+        err_code = RSA_BUFFER_ERR_KEY; goto err;
     }
 
     // Pull out key and iv from the buffer
@@ -312,8 +328,7 @@ int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct 
         !(cipctx = EVP_CIPHER_CTX_new()) ||
         !EVP_OpenInit(cipctx, EVP_aes_256_cbc(), ek, ekl, iv, pkey_priv)
     ) {
-        debug("Failed to init Open: %s", ERR_error_string(ERR_get_error(), NULL));
-        is_err = 1; goto err;
+        err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
     }
 
     // For each chunk of ciphertext
@@ -325,8 +340,7 @@ int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct 
         // Decrypt chunk and commit plain text
         len_int = vec_plain.iov_len;
         if (EVP_OpenUpdate(cipctx, vec_plain.iov_base, &len_int, vec_enc[i].iov_base, len) == 0) {
-            debug("Decryption step failed %s", ERR_error_string(ERR_get_error(), NULL));
-            is_err = 1; goto err;
+            err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
         }
         vec_plain.iov_len = len_int;
         evbuffer_commit_space(plain_buff, &vec_plain, 1);
@@ -335,8 +349,9 @@ int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct 
     // Decrypt final chunk
     evbuffer_reserve_space(plain_buff, EVP_CIPHER_block_size(EVP_aes_256_cbc()), &vec_plain, 1);
     len_int = vec_plain.iov_len;
-    if (!EVP_OpenFinal(cipctx, vec_plain.iov_base, &len_int))
-        debug("Open final failed");
+    if (!EVP_OpenFinal(cipctx, vec_plain.iov_base, &len_int)) {
+        err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
+    }
     vec_plain.iov_len = len_int;
     evbuffer_commit_space(plain_buff, &vec_plain, 1);
 
@@ -347,5 +362,5 @@ int rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *der_priv_key, struct 
     EVP_PKEY_free(pkey_priv);
     EVP_CIPHER_CTX_free(cipctx);
 
-    return !is_err;
+    return err_code;
 }
