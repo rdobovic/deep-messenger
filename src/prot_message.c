@@ -13,7 +13,7 @@
 static void ack_received_cb(int ack_success, struct prot_main *pmain, void *arg) {
     struct prot_message *msg = arg;
 
-    // Ako je ACK zaprimljen i ovo je klijent postavi poruku kao poslanu
+    // When ACK is received and this is client set message as sent
     if (ack_success && pmain->mode == PROT_MODE_CLIENT) {
         msg->dbmsg_client->status = DB_MESSAGE_STATUS_SENT;
         db_message_save(msg->db, msg->dbmsg_client);
@@ -28,6 +28,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
     struct prot_message *msg = phand->msg;
     struct prot_ack_ed25519 *ack;
 
+    // Only client can sent a message outside the message list
     if (pmain->mode == PROT_MODE_CLIENT) {
         struct db_contact *cont;
 
@@ -35,21 +36,25 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 
         if (msg->to == PROT_MESSAGE_TO_CLIENT) {
             ack = prot_ack_ed25519_new(PROT_ACK_SIGNATURE, cont->remote_sig_key_pub, NULL, ack_received_cb, msg);
-            prot_main_push_recv(pmain, &(ack->hrecv));
         }
 
-        // Write for mailbox desctination....
+        if (msg->to == PROT_MESSAGE_TO_MAILBOX) {
+            uint8_t onion_key[ONION_PUB_KEY_LEN];
 
+            onion_extract_key(cont->mailbox_onion, onion_key);
+            ack = prot_ack_ed25519_new(PROT_ACK_ONION, onion_key, NULL, ack_received_cb, msg);
+        }
+
+        prot_main_push_recv(pmain, &(ack->hrecv));
         phand->cleanup_cb = NULL;
         db_contact_free(cont);
     }
-
-    
 }
 
 // Free message handler object
 static void tran_cleanup(struct prot_tran_handler *phand) {
     struct prot_message *msg = phand->msg;
+    db_message_free(msg->dbmsg_client);
     prot_message_free(msg);
 }
 
@@ -57,11 +62,7 @@ static void tran_cleanup(struct prot_tran_handler *phand) {
 static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_message *msg = phand->msg;
 
-    if (pmain->mode == PROT_MODE_MAILBOX) {
-        evbuffer_add(phand->buffer, msg->dbmsg_mailbox->data, msg->dbmsg_mailbox->data_len);
-        return;
-    }
-
+    // Only client can send a message outside the message list
     if (pmain->mode == PROT_MODE_CLIENT) {
         uint8_t ctype;
         struct evbuffer *plain;
@@ -114,7 +115,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
 }
 
 // Allocate new message object
-static struct prot_message * prot_message_new(sqlite3 *db, int dry_run) {
+static struct prot_message * prot_message_new(sqlite3 *db) {
     struct prot_message *msg;
 
     msg = safe_malloc(sizeof(struct prot_message),
@@ -122,7 +123,6 @@ static struct prot_message * prot_message_new(sqlite3 *db, int dry_run) {
     memset(msg, 0, sizeof(struct prot_message));
 
     msg->db = db;
-    msg->dry_run = dry_run;
 
     msg->hrecv.msg = msg;
     msg->hrecv.msg_code = PROT_MESSAGE_CONTAINER;
@@ -139,19 +139,19 @@ static struct prot_message * prot_message_new(sqlite3 *db, int dry_run) {
 }
 
 // Allocate new object for message handler (actual text message)
-struct prot_message * prot_message_client_new(sqlite3 *db, int dry_run, enum prot_message_to to, struct db_message *dbmsg) {
+struct prot_message * prot_message_client_new(sqlite3 *db, enum prot_message_to to, struct db_message *dbmsg) {
     struct prot_message *msg;
 
-    msg = prot_message_new(db, dry_run);
+    msg = prot_message_new(db);
     msg->to = to;
     msg->dbmsg_client = dbmsg;
 }
 
 // Allocate new object for message handler (actual text message)
-struct prot_message * prot_message_mailbox_new(sqlite3 *db, int dry_run, struct db_mb_message *dbmsg) {
+struct prot_message * prot_message_mailbox_new(sqlite3 *db, struct db_mb_message *dbmsg) {
     struct prot_message *msg;
 
-    msg = prot_message_new(db, dry_run);
+    msg = prot_message_new(db);
     msg->dbmsg_mailbox = dbmsg;
 }
 
