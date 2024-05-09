@@ -82,7 +82,7 @@ int main(void) {
 
     msg->contact_id = cont->id;
     msg->type = DB_MESSAGE_TEXT;
-    msg->status = DB_MESSAGE_RECV_CONFIRMED;
+    msg->status = DB_MESSAGE_STATUS_RECV_CONFIRMED;
     msg->sender = DB_MESSAGE_SENDER_FRIEND;
     db_message_set_text(msg, "Ola", -1);
     db_message_save(dbg, msg);
