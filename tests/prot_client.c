@@ -11,10 +11,10 @@
 #include <prot_main.h>
 #include <prot_transaction.h>
 #include <prot_friend_req.h>
+#include <prot_message.h>
 #include <prot_ack.h>
+#include <db_message.h>
 #include <base32.h>
-
-#define PRIV_KEY "7d2ckcarsvublbqu2dhcenljx3i2uy4wk5uhc2yuu66f76wkadnq"
 
 #define LOCALHOST 0x7F000001
 
@@ -35,6 +35,8 @@ int main() {
     struct prot_main *pmain;
     struct prot_txn_req *treq;
     struct prot_friend_req *freq;
+    struct prot_message *pmsg;
+    struct db_message *dbmsg;
 
     base = event_base_new();
 
@@ -50,7 +52,7 @@ int main() {
         return 1;
     }
 
-    db_init_global("deep_messenger2.db");
+    db_init_global("deep_messenger.db");
 
     pmain = prot_main_new(base, dbg);
     prot_main_assign(pmain, bev);
@@ -59,8 +61,24 @@ int main() {
     treq = prot_txn_req_new();
     prot_main_push_tran(pmain, &(treq->htran));
 
-    freq = prot_friend_req_new(dbg, "scddeoyfwo2nbioc55fd5hys4voln4qbm3xu65ffhhvzl6rnv7h2aeid.onion");
-    prot_main_push_tran(pmain, &(freq->htran));
+    //freq = prot_friend_req_new(dbg, "scddeoyfwo2nbioc55fd5hys4voln4qbm3xu65ffhhvzl6rnv7h2aeid.onion");
+    freq = prot_friend_req_new(dbg, "g7kfkvigtyx45az27obwydfq3zrxfwl77so3n3tqv22cw3qvz6cuv4qd.onion");
+    //prot_main_push_tran(pmain, &(freq->htran));
+
+    dbmsg = db_message_new();
+    dbmsg->type = DB_MESSAGE_NICK;
+    dbmsg->contact_id = 19;
+    db_message_gen_id(dbmsg);
+    //db_message_set_text(dbmsg, "This is test message", 20);
+    memcpy(dbmsg->body_nick, "rokica", 6);
+    dbmsg->body_nick_len = 6;
+    dbmsg->status = DB_MESSAGE_STATUS_UNDELIVERED;
+    db_message_save(dbg, dbmsg);
+
+    pmsg = prot_message_client_new(dbg, PROT_MESSAGE_TO_CLIENT, dbmsg);
+    prot_main_push_tran(pmain, &(pmsg->htran));
+
+    debug("init end");
 
     event_base_dispatch(base);
     return 0;

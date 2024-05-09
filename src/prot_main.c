@@ -12,6 +12,7 @@
 #include <debug.h>
 #include <prot_friend_req.h>
 #include <prot_transaction.h>
+#include <prot_message.h>
 
 // Internal bufferevent callbacks
 static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx);
@@ -144,13 +145,17 @@ void prot_main_recv_done(struct prot_main *pmain) {
 // Push new message into transmission queue, returns zero on success
 void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phand) {
     // Insert handler into queue
+    debug("pushing into queue %p", phand);
     queue_enqueue(pmain->tran_q, phand);
+    debug("pushed into queue");
 
     // If bufferevent is ready and no transmission is in progress
     if (pmain->bev_ready && !pmain->tran_in_progress) {
         // Call write callback manually to try starting a new transmission
         prot_main_bev_write_cb(pmain->bev, pmain);
     }
+
+    debug("pushed success");
 }
 
 // Push new message receiver into receiver queue, this is done when you are
@@ -314,6 +319,8 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
             pmain->message_check_done = 0;
 
             prot_main_done_check(pmain);
+        } else {
+            return;
         }
     }
 }
@@ -483,6 +490,16 @@ void *prot_handler_autogen(
 
         if (phand_tran)
             *phand_tran = &(msg->htran);
+
+        return msg;
+    }
+
+    if (code == PROT_MESSAGE_CONTAINER) {
+        struct prot_message *msg;
+        msg = prot_message_client_new(db, PROT_MESSAGE_TO_CLIENT, NULL);
+
+        if (phand_recv)
+            *phand_recv = &(msg->hrecv);
 
         return msg;
     }

@@ -21,6 +21,9 @@
 #define ED25519_PRIV_KEY_LEN  32
 #define ED25519_SIGNATURE_LEN 64
 
+#define AES_IV_LENGTH  16
+#define AES_ENC_KEY_LENGTH 256
+
 /**
  * Mailbox service specific constants
  */

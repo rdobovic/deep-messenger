@@ -17,8 +17,9 @@ struct prot_message {
     // Used to specify if message if we are sending message to the
     // or the client
     enum prot_message_to to;
-    struct db_message *dbmsg_client;
-    struct db_mb_message *dbmsg_mailbox;
+    struct db_message *client_msg;
+    struct db_contact *client_cont;
+    struct db_mb_message *mailbox_msg;
 
     struct prot_tran_handler htran;
     struct prot_recv_handler hrecv;

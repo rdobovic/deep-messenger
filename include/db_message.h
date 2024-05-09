@@ -74,6 +74,9 @@ void db_message_refresh(sqlite3 *db, struct db_message *msg);
 // Write text_len characters of text into message text body
 void db_message_set_text(struct db_message *msg, const char *text, int text_len);
 
+// Generate random global message ID
+void db_message_gen_id(struct db_message *msg);
+
 // They return NULL when not found, if dest is not NULL functions will copy
 // data from the database into dest, otherwise they will allocate new structure
 

@@ -272,7 +272,12 @@ enum rsa_buffer_errors rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *de
     struct evbuffer_iovec vec_plain; // Plaintext chunk used when decrypting
 
     EVP_PKEY *pkey_priv = NULL;
-    EVP_CIPHER_CTX *cipctx = NULL; 
+    EVP_CIPHER_CTX *cipctx = NULL;
+
+    // Decode DER encoded private key
+    if (!(pkey_priv = rsa_2048bit_priv_key_decode(der_priv_key))) {
+        err_code = RSA_BUFFER_ERR_KEY; goto err;
+    }
 
     // Calculate symetric key and IV length
     ekl = EVP_PKEY_get_size(pkey_priv);
@@ -280,6 +285,8 @@ enum rsa_buffer_errors rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *de
     // Allocate memory for symetric key and IV
     ek = safe_malloc(ekl, "Failed to allocate EK when decrypting buffer");
     iv = safe_malloc(ivl, "Failed to allocate IV when decrypting buffer");
+
+    debug("ekl(%d) ivl(%d)", ekl, ivl);
 
     if (enc_len)
         *enc_len = sizeof(encrypted_len) + ekl + ivl;
@@ -306,11 +313,6 @@ enum rsa_buffer_errors rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *de
         goto err;
     }
 
-    // Decode DER encoded private key
-    if (!(pkey_priv = rsa_2048bit_priv_key_decode(der_priv_key))) {
-        err_code = RSA_BUFFER_ERR_KEY; goto err;
-    }
-
     // Pull out key and iv from the buffer
     evbuffer_ptr_set(enc_buff, &pos, sizeof(encrypted_len) + encrypted_len, EVBUFFER_PTR_SET);
     evbuffer_copyout_from(enc_buff, &pos, ek, ekl);
@@ -323,11 +325,13 @@ enum rsa_buffer_errors rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *de
     vec_enc = safe_malloc(sizeof(struct evbuffer_iovec) * n_vec_enc, "FAIL");
     n_vec_enc = evbuffer_peek(enc_buff, encrypted_len, &pos, vec_enc, n_vec_enc);
 
+    debug("Encrypted len: %d", encrypted_len);
     // Init data decryption with given keys
     if (
         !(cipctx = EVP_CIPHER_CTX_new()) ||
         !EVP_OpenInit(cipctx, EVP_aes_256_cbc(), ek, ekl, iv, pkey_priv)
     ) {
+        debug("Init failed %s", ERR_error_string(ERR_get_error(), NULL));
         err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
     }
 
@@ -340,6 +344,7 @@ enum rsa_buffer_errors rsa_buffer_decrypt(struct evbuffer *enc_buff, uint8_t *de
         // Decrypt chunk and commit plain text
         len_int = vec_plain.iov_len;
         if (EVP_OpenUpdate(cipctx, vec_plain.iov_base, &len_int, vec_enc[i].iov_base, len) == 0) {
+            debug("Update failed");
             err_code = RSA_BUFFER_ERR_OPENSSL; goto err;
         }
         vec_plain.iov_len = len_int;

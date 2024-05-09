@@ -57,9 +57,9 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     uint8_t onion_priv_key[ONION_PRIV_KEY_LEN]; // My onion private key (to sign the message)
 
     // Generate ED25519 keypair
-    ed25519_keygen(msg->friend->local_sig_key_pub, msg->friend->local_sig_key_pub);
+    ed25519_keygen(msg->friend->local_sig_key_pub, msg->friend->local_sig_key_priv);
     // Generate RSA 2048bit keypair
-    rsa_2048bit_keygen(msg->friend->local_enc_key_pub, msg->friend->local_enc_key_pub);
+    rsa_2048bit_keygen(msg->friend->local_enc_key_pub, msg->friend->local_enc_key_priv);
 
     // Fetch data from the database
     db_options_get_text(msg->db, "onion_address", onion_address, ONION_ADDRESS_LEN);

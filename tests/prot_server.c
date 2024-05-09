@@ -48,7 +48,7 @@ int main()
     int port = DEEP_MESSENGER_PORT;
 
     debug_set_fp(stdout);
-    db_init_global("deep_messenger.db");
+    db_init_global("deep_messenger2.db");
 
     base = event_base_new();
 

@@ -65,7 +65,7 @@ void db_contact_save(sqlite3 *db, struct db_contact *cont) {
         SQLITE_OK != sqlite3_bind_blob(stmt, 8, cont->local_sig_key_pub, CLIENT_SIG_KEY_PUB_LEN, NULL)    ||
         SQLITE_OK != sqlite3_bind_blob(stmt, 9, cont->local_sig_key_priv, CLIENT_SIG_KEY_PRIV_LEN, NULL)  ||
         SQLITE_OK != sqlite3_bind_blob(stmt, 10, cont->local_enc_key_pub, CLIENT_ENC_KEY_PUB_LEN, NULL)   ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 11, cont->local_sig_key_priv, CLIENT_ENC_KEY_PRIV_LEN, NULL) ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 11, cont->local_enc_key_priv, CLIENT_ENC_KEY_PRIV_LEN, NULL) ||
         SQLITE_OK != sqlite3_bind_blob(stmt, 12, cont->remote_sig_key_pub, CLIENT_SIG_KEY_PUB_LEN, NULL)  ||
         SQLITE_OK != sqlite3_bind_blob(stmt, 13, cont->remote_enc_key_pub, CLIENT_ENC_KEY_PUB_LEN, NULL)
     ) {
@@ -196,7 +196,7 @@ struct db_contact * db_contact_get_by_rsk_pub(sqlite3 *db, uint8_t *key, struct 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to fetch database contact (by rsk pub)");
 
-    if (sqlite3_bind_text(stmt, 1, key, CLIENT_SIG_KEY_PUB_LEN, NULL) != SQLITE_OK)
+    if (sqlite3_bind_blob(stmt, 1, key, CLIENT_SIG_KEY_PUB_LEN, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to bind contact onion address, when fetching");
 
     cont = db_contact_process_row(db, stmt, dest);

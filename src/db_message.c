@@ -9,6 +9,7 @@
 #include <helpers.h>
 #include <sqlite3.h>
 #include <constants.h>
+#include <openssl/rand.h>
 
 // Create new empty message object
 struct db_message * db_message_new(void) {
@@ -285,4 +286,10 @@ void db_message_delete(sqlite3 *db, struct db_message *msg) {
         sys_db_crash(db, "Failed to delete message from database (step)");
 
     sqlite3_finalize(stmt);
+}
+
+// Generate random global message ID
+void db_message_gen_id(struct db_message *msg) {
+    if (msg)
+        RAND_bytes(msg->global_id, MESSAGE_ID_LEN);
 }
