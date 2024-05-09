@@ -31,7 +31,7 @@ struct prot_message * prot_message_client_new(sqlite3 *db, enum prot_message_to 
 // Allocate new object for message handler (actual text message)
 struct prot_message * prot_message_mailbox_new(sqlite3 *db, struct db_mb_message *dbmsg);
 
-// Free given handler
+// Free given handler and message model given to the new method
 void prot_message_free(struct prot_message *msg);
 
 #endif

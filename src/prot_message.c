@@ -12,6 +12,7 @@
 #include <buffer_crypto.h>
 #include <debug.h>
 
+// Called when ACK is arrived or failed to arrive
 static void ack_received_cb(int ack_success, struct prot_main *pmain, void *arg) {
     struct prot_message *msg = arg;
 
@@ -104,6 +105,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     }
 }
 
+// Called when ACK is sent successfully or the sending failed
 static void ack_sent_cb(int ack_success, struct prot_main *pmain, void *arg) {
     struct prot_message *msg = arg;
 
