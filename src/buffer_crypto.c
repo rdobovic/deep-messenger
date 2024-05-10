@@ -87,7 +87,7 @@ int ed25519_buffer_validate(struct evbuffer *buff, size_t len, uint8_t *pub_key)
     int is_err = 0, is_valid = 0;
     struct evbuffer_ptr ptr;
     struct evbuffer_iovec *iv;
-    size_t content_len = len - ED25519_SIGNATURE_LEN;
+    size_t content_len;
 
     EVP_PKEY *pkey = NULL;
     EVP_MD_CTX *ctx = NULL;
@@ -100,11 +100,11 @@ int ed25519_buffer_validate(struct evbuffer *buff, size_t len, uint8_t *pub_key)
 
     if (len == 0)
         len = evbuffer_get_length(buff);
+    content_len = len - ED25519_SIGNATURE_LEN;
 
     if (!(pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, NULL, pub_key, ED25519_PUB_KEY_LEN))) {
         is_err = 1; goto err;
     }
-
     hashctx = EVP_MD_CTX_new();
     if (!EVP_DigestInit_ex2(hashctx, EVP_sha512(), NULL)) {
         is_err = 1; goto err;

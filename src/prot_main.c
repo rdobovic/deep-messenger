@@ -13,6 +13,7 @@
 #include <prot_friend_req.h>
 #include <prot_transaction.h>
 #include <prot_message.h>
+#include <prot_client_fetch.h>
 
 // Internal bufferevent callbacks
 static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx);
@@ -497,6 +498,16 @@ void *prot_handler_autogen(
     if (code == PROT_MESSAGE_CONTAINER) {
         struct prot_message *msg;
         msg = prot_message_client_new(db, PROT_MESSAGE_TO_CLIENT, NULL);
+
+        if (phand_recv)
+            *phand_recv = &(msg->hrecv);
+
+        return msg;
+    }
+
+    if (code == PROT_CLIENT_FETCH) {
+        struct prot_client_fetch *msg;
+        msg = prot_client_fetch_new(db, NULL);
 
         if (phand_recv)
             *phand_recv = &(msg->hrecv);

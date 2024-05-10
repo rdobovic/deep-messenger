@@ -15,6 +15,7 @@
 #include <prot_ack.h>
 #include <db_message.h>
 #include <base32.h>
+#include <prot_client_fetch.h>
 
 #define LOCALHOST 0x7F000001
 
@@ -37,6 +38,8 @@ int main() {
     struct prot_friend_req *freq;
     struct prot_message *pmsg;
     struct db_message *dbmsg;
+    struct prot_client_fetch *cfet;
+    struct db_contact *cont;
 
     base = event_base_new();
 
@@ -73,10 +76,14 @@ int main() {
     memcpy(dbmsg->body_nick, "rokica", 6);
     dbmsg->body_nick_len = 6;
     dbmsg->status = DB_MESSAGE_STATUS_UNDELIVERED;
-    db_message_save(dbg, dbmsg);
+    //db_message_save(dbg, dbmsg);
 
     pmsg = prot_message_client_new(dbg, PROT_MESSAGE_TO_CLIENT, dbmsg);
-    prot_main_push_tran(pmain, &(pmsg->htran));
+    //prot_main_push_tran(pmain, &(pmsg->htran));
+
+    cont = db_contact_get_by_pk(dbg, 19, NULL);
+    cfet = prot_client_fetch_new(dbg, cont);
+    prot_main_push_tran(pmain, &(cfet->htran));
 
     debug("init end");
 

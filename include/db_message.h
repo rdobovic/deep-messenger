@@ -89,4 +89,10 @@ struct db_message * db_message_get_last(sqlite3 *db, struct db_contact *cont, st
 // Get message before the given message for the same contact
 struct db_message * db_message_get_before(sqlite3 *db, struct db_message *current_msg, struct db_message *dest);
 
+// Fetch the list of messages for given contact with given status
+struct db_message ** db_message_get_all(sqlite3 *db, struct db_contact *cont, enum db_message_status status, int *n_msgs);
+
+// Free previously fetched message list
+void db_message_free_all(struct db_message **msgs, int n_msgs);
+
 #endif

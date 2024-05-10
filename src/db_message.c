@@ -293,3 +293,62 @@ void db_message_gen_id(struct db_message *msg) {
     if (msg)
         RAND_bytes(msg->global_id, MESSAGE_ID_LEN);
 }
+
+// Fetch the list of messages for given contact with given status
+struct db_message ** db_message_get_all(sqlite3 *db, struct db_contact *cont, enum db_message_status status, int *n_msgs) {
+    int i;
+    sqlite3_stmt *stmt;
+    struct db_message **msgs;
+
+    const char sql[] =
+        "SELECT * FROM client_messages WHERE contact_id = ? AND status = ?";
+    const char sql_count[] =
+        "SELECT COUNT(*) FROM client_messages WHERE contact_id = ? AND status = ?";
+
+    if (sqlite3_prepare_v2(db, sql_count, -1, &stmt, NULL) != SQLITE_OK)
+        sys_db_crash(db, "Failed to count client messages");
+
+    if (
+        SQLITE_OK != sqlite3_bind_int(stmt, 1, cont->id) ||
+        SQLITE_OK != sqlite3_bind_int(stmt, 2, status)
+    ) {
+        sys_db_crash(db, "Failed to bind fields when counting client messages");
+    }
+
+    if (sqlite3_step(stmt) != SQLITE_ROW)
+        sys_db_crash(db, "Failed to count client messages (step)");
+
+    *n_msgs = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+
+    if (*n_msgs == 0) return NULL;
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
+        sys_db_crash(db, "Failed to fetch client messages");
+
+    if (
+        SQLITE_OK != sqlite3_bind_int(stmt, 1, cont->id) ||
+        SQLITE_OK != sqlite3_bind_int(stmt, 2, status)
+    ) {
+        sys_db_crash(db, "Failed to bind fields when fetching client messages");
+    }
+
+    msgs = safe_malloc((sizeof(struct db_message *) * (*n_msgs)),
+        "Failed to allocate memory for client message list");
+
+    for (i = 0; i < *n_msgs; i++) {
+        msgs[i] = db_message_process_row(db, stmt, NULL);
+    }
+
+    sqlite3_finalize(stmt);
+    return msgs;
+}
+
+// Free previously fetched message list
+void db_message_free_all(struct db_message **msgs, int n_msgs) {
+    int i;
+
+    for (i = 0; i < n_msgs; i++) {
+        db_message_free(msgs[i]);
+    }
+}

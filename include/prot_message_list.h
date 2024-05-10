@@ -9,6 +9,9 @@
 // Message list data
 struct prot_message_list {
     uint8_t length;
+    sqlite3 *db;
+
+    struct db_contact *client_cont;
 
     int n_client_msgs;
     struct db_message **client_msgs;
@@ -20,10 +23,11 @@ struct prot_message_list {
 };
 
 // Allocate new message list handler (when in the client mode)
-struct prot_message_list prot_message_list_client_new(sqlite3 *db, struct db_message **msgs, int n_msgs);
+struct prot_message_list * prot_message_list_client_new(
+    sqlite3 *db, struct db_contact *cont, struct db_message **msgs, int n_msgs);
 
 // Allocate new message list handler (when in the mailbox mode)
-struct prot_message_list prot_message_list_mailbox_new(sqlite3 *db, struct db_mb_message **msgs, int n_msgs);
+struct prot_message_list * prot_message_list_mailbox_new(sqlite3 *db, struct db_mb_message **msgs, int n_msgs);
 
 // Free given message list handler and messages given to new method
 void prot_message_list_free(struct prot_message_list *msg);

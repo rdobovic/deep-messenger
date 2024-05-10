@@ -239,6 +239,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
                     goto err;
                 }
                 memcpy(msg->client_msg->body_mbox_id, plain_data, MAILBOX_ID_LEN);
+                // NOT SAFE: Additional checks must be performed for onion address
                 memcpy(msg->client_msg->body_mbox_onion, plain_data + MAILBOX_ID_LEN, ONION_ADDRESS_LEN);
 
                 for (i = 0; i < MAILBOX_ID_LEN; i++)
@@ -263,16 +264,16 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
                     goto err;
                 }
                 msg->client_msg->status = DB_MESSAGE_STATUS_SENT_CONFIRMED;
-                break;
+                goto ack_send;
             default:
                 prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
                 goto err;
         }
 
         msg->client_msg->type = ctype;
+        msg->client_msg->status = DB_MESSAGE_STATUS_RECV;
 
         ack_send:
-        msg->client_msg->status = DB_MESSAGE_STATUS_RECV;
         ack = prot_ack_ed25519_new(PROT_ACK_SIGNATURE, NULL, msg->client_cont->local_sig_key_priv, ack_sent_cb, msg);
         prot_main_push_tran(pmain, &(ack->htran));
         msg->hrecv.cleanup_cb = NULL;
