@@ -27,6 +27,8 @@ enum db_message_status {
     // For messages I received
     DB_MESSAGE_STATUS_RECV,
     DB_MESSAGE_STATUS_RECV_CONFIRMED,
+    // Any type used in get func
+    DB_MESSAGE_STATUS_ANY,
 };
 
 enum db_message_sender {
