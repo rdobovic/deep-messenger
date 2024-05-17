@@ -222,12 +222,14 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         dbmsg->type = ctype;
         dbmsg->sender = DB_MESSAGE_SENDER_FRIEND;
         dbmsg->status = DB_MESSAGE_STATUS_RECV;
+        dbmsg->contact_id = msg->client_cont->id;
         memcpy(dbmsg->global_id, gid, MESSAGE_ID_LEN);
 
         switch (ctype) {
             case DB_MESSAGE_TEXT:
                 debug("Message type is text");
                 db_message_set_text(dbmsg, plain_data, plain_len);
+                break;
             case DB_MESSAGE_NICK:
                 if (plain_len > CLIENT_NICK_MAX_LEN) {
                     evbuffer_drain(input, message_len);
@@ -272,6 +274,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
                     continue;
                 }
                 dbmsg->status = DB_MESSAGE_STATUS_SENT_CONFIRMED;
+                break;
             default:
                 evbuffer_drain(input, message_len);
                 continue;
