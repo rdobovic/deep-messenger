@@ -101,11 +101,17 @@ int ui_init(void) {
 
     debug("File opened %p", fd);
 
+    /*
     while (getline(&str, &len, fd) != -1) {
+        size_t llen;
         wchar_t buff[512];
+        llen = strlen(str);
+        str[llen - 1] = '\0';
         mbstowcs(buff, str, 510);
         ui_logger_log(logger, buff);
-    }
+    }*/
+
+    ui_logger_log(logger, L"Hola how\nare you\n");
 
     debug("Generating and attaching menu comp");
 

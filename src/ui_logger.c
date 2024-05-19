@@ -1,3 +1,4 @@
+#include <array.h>
 #include <wchar.h>
 #include <string.h>
 #include <stdlib.h>
@@ -26,17 +27,18 @@ struct ui_logger * ui_logger_new(void) {
     struct ui_logger *logr;
 
     logr = safe_malloc(sizeof(struct ui_logger), LOGGER_MEMORY_ERROR);
-    zero_chunk(logr, struct ui_logger);
-    logr->end = -1;
+    memset(logr, 0, sizeof(struct ui_logger));
+
+    logr->lines = array(wchar_t *);
+    logr->line_sizes = array(int);
 
     return logr;
 }
 
 void ui_logger_clear(struct ui_logger *logr) {
     int i;
-    for (i = 0; i < ui_logger_size(logr); i++) {
-        if (ui_logger_line(logr, i))
-            free(ui_logger_line(logr, i));
+    for (i = 0; i < logr->size; i++) {
+        array_free(logr->lines[i]);
     }
 
     if (ui_window_is_defined(logr->win)) {
@@ -44,8 +46,7 @@ void ui_logger_clear(struct ui_logger *logr) {
         wclrtobot(logr->win->content);
     }
 
-    logr->start = 0;
-    logr->end = -1;
+    logr->size = 0;
     logr->i_line = 0;
     logr->i_wrap = 0;
     ui_logger_draw_if_selected(logr);
@@ -53,32 +54,41 @@ void ui_logger_clear(struct ui_logger *logr) {
 
 void ui_logger_free(struct ui_logger *logr) {
     ui_logger_clear(logr);
+    array_free(logr->lines);
+    array_free(logr->line_sizes);
     free(logr);
 }
 
 void ui_logger_log(struct ui_logger *logr, const wchar_t *text) {
-    int len, end_index;
-    wchar_t *wchp;
+    int len, i, line_start;
 
     len = wcslen(text);
-    wchp = safe_malloc(sizeof(wchar_t) * (len + 1), LOGGER_MEMORY_ERROR);
-    wcsncpy(wchp, text, len);
-    wchp[len] = 0;
+    line_start = 0;
 
-    if (ui_logger_size(logr) == UI_LOGGER_BUFFER_SIZE) {
-        free(ui_logger_line(logr, 0));
-        logr->start = ui_logger_i(logr, 1);
+    for (i = 0; i <= len; i++) {
+        wchar_t *wchp;
+
+        if (text[i] == '\n' || i == len) {
+            // Allocate array for new line
+            wchp = array(wchar_t);
+            array_expand(wchp, i - line_start + 1);
+            wcsncpy(wchp, text + line_start, i - line_start);
+            wchp[i - line_start] = 0;
+
+            // Store line data
+            array_set(logr->lines, logr->size, wchp);
+            array_set(logr->line_sizes, logr->size, i - line_start);
+
+            ++logr->size;
+            line_start = i + 1;
+        }
     }
 
-    end_index = ui_logger_size(logr);
-
-    logr->end = ui_logger_i(logr, end_index);
-    logr->buffer[logr->end] = wchp;
-    logr->buffer_sizes[logr->end] = len;
-
-    logr->i_line = end_index;
-    logr->i_wrap = ui_window_is_defined(logr->win) ?
-        (ui_logger_line_size(logr, end_index) - 1) : 0;
+    logr->i_line = logr->size - 1;
+    if (ui_window_is_defined(logr->win))
+        logr->i_wrap = ui_logger_line_size(logr, logr->i_line) - 1;
+    else
+        logr->i_wrap = 0;
 
     // Redraw the window if it's selected or manager is selected
     ui_logger_draw_if_selected(logr);
@@ -98,18 +108,17 @@ void ui_logger_printf(struct ui_logger *logr, const wchar_t *format, ...) {
 }
 
 void ui_logger_input_cb(
-    struct ui_window *win, 
-    wchar_t ch, 
-    int is_special_key, 
+    struct ui_window *win,
+    wchar_t ch,
+    int is_special_key,
     void *component
 ) {
     int line_cnt;
-    int end_index;
     int stop_li, stop_wi;
     struct ui_logger *logr = component;
 
     if (!is_special_key) {
-        if (ch == KEY_CTRL('L')) {
+        if (ch == KEY_CTRL('L') && logr->allow_clear) {
             ui_logger_clear(logr);
         }
         return;
@@ -119,8 +128,8 @@ void ui_logger_input_cb(
         case KEY_UP:
             // Calculate where to stop scrolling up
             line_cnt = 0;
-            for (stop_li = 0; stop_li < ui_logger_size(logr) && line_cnt < win->rows; stop_li++)
-                for (stop_wi = 0; stop_wi < ui_logger_line_size(logr, stop_li) && line_cnt < win->rows; stop_wi++)
+            for (stop_li = 0; stop_li < logr->size && line_cnt < win->rows; stop_li++)
+                for (stop_wi = 0; stop_wi < ui_logger_line_size(logr, stop_wi) && line_cnt < win->rows; stop_wi++)
                     ++line_cnt;
 
             if (logr->i_line >= stop_li || logr->i_wrap >= stop_wi) {
@@ -134,10 +143,9 @@ void ui_logger_input_cb(
             break;
 
         case KEY_DOWN:
-            end_index = ui_logger_size(logr) - 1;
             if (
-                logr->i_line < end_index || 
-                logr->i_wrap < ui_logger_line_size(logr, end_index) - 1
+                logr->i_line < logr->size - 1 || 
+                logr->i_wrap < ui_logger_line_size(logr, logr->size - 1) - 1
             ) {
                 if (logr->i_wrap < ui_logger_line_size(logr, logr->i_line) - 1) {
                     ++logr->i_wrap;
@@ -160,9 +168,12 @@ void ui_logger_define_cb(
     int end_index;
     struct ui_logger *logr = component;
 
-    end_index = ui_logger_size(logr) - 1;
-    logr->i_line = end_index;
-    logr->i_wrap = ui_logger_line_size(logr, end_index) - 1;
+    if (logr->size > 0) {
+        logr->i_line = logr->size - 1;
+        logr->i_wrap = ui_logger_line_size(logr, logr->i_line) - 1;
+    } else {
+        logr->i_line = logr->i_wrap = 0;
+    }
 }
 
 void ui_logger_draw_cb(
@@ -172,17 +183,15 @@ void ui_logger_draw_cb(
 ) {
     int i, j;
     int line_cnt = 0;
-    int buff_size, line_size, max_lines, bottom_padding;
+    int line_size, max_lines, bottom_padding;
     struct ui_logger *logr = component;
 
-    line_cnt = 0;
-    buff_size = ui_logger_size(logr);
-
-    if (buff_size == 0) return;
+    if (logr->size == 0) return;
 
     // Calculate size of empty space under the text if there are
     // more rows than lines
-    for (i = 0; i < buff_size; i++)  {
+    line_cnt = 0;
+    for (i = 0; i < logr->size; i++)  {
         line_cnt += ui_logger_line_size(logr, i);
         bottom_padding = win->rows - line_cnt;
 
@@ -204,10 +213,13 @@ void ui_logger_draw_cb(
             if (line_cnt == win->rows)
                 goto done_drawing;
 
-            ui_logger_wline(logr, i, j, wline, wsize);
+            wline = ui_logger_get_wline(logr, i, j);
+            wsize = ui_logger_wline_size(logr, i, j);
+
             wmove(win->content, (win->rows - 1) - (bottom_padding + line_cnt), 0);
             wclrtoeol(win->content);
-            waddnwstr(win->content, wline, wsize);
+            if (wsize > 0)
+                waddnwstr(win->content, wline, wsize);
             ++line_cnt;
         }
     }
