@@ -9,7 +9,7 @@
 
 // Access given element of array, expand if needed
 #define array_at(arr, i) \
-    (arr)[(i) + ((uintptr_t)(_array_expand((arr), (i))) * 0)]
+    (arr)[(i) + ((uintptr_t)((arr) = _array_expand((arr), (i) + 1)) * 0)]
 
 // Set given element of array, expand if needed
 #define array_set(arr, i, value) \
