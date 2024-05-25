@@ -44,8 +44,8 @@ void db_mb_account_save(sqlite3 *db, struct db_mb_account *acc) {
         sys_db_crash(db, "Failed to save mailbox account into database");
 
     if (
-        SQLITE_OK != sqlite3_bind_blob(stmt, 1, acc->mailbox_id, MAILBOX_ACCOUNT_KEY_PUB_LEN, NULL) ||
-        SQLITE_OK != sqlite3_bind_blob(stmt, 2, acc->signing_pub_key, CLIENT_SIG_KEY_PUB_LEN, NULL)
+        SQLITE_OK != sqlite3_bind_blob(stmt, 1, acc->mailbox_id, MAILBOX_ID_LEN, NULL) ||
+        SQLITE_OK != sqlite3_bind_blob(stmt, 2, acc->signing_pub_key, MAILBOX_ACCOUNT_KEY_PUB_LEN, NULL)
     ) {
         sys_db_crash(db, "Failed to bind mailbox account fields");
     }

@@ -179,15 +179,11 @@ void prot_main_setcb(
 // Used to enable/disable transmission on main protocol handler
 void prot_main_tran_enable(struct prot_main *pmain, int yes);
 
-// Allocate new object for given message type and set given pointers
-// to handlers for that message, if pointers are NULL they are not set
-// function returns pointer to message object
-void *prot_handler_autogen(
-    enum prot_message_codes code,
-    struct prot_recv_handler **phand_recv,
-    struct prot_tran_handler **phand_tran,
-    sqlite3 *db
-);
+// Allocate new receive handler for given message type, returns prot_recv_handler (on client)
+struct prot_recv_handler *prot_handler_autogen_client(enum prot_message_codes code, sqlite3 *db);
+
+// Allocate new receive handler for given message type, returns prot_recv_handler (on mailbox)
+struct prot_recv_handler *prot_handler_autogen_mailbox(enum prot_message_codes code, sqlite3 *db);
 
 // Convert given error code to human readable error
 const char * prot_main_error_string(enum prot_status_codes err_code);

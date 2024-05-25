@@ -62,11 +62,11 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     rsa_2048bit_keygen(msg->friend->local_enc_key_pub, msg->friend->local_enc_key_priv);
 
     // Fetch data from the database
-    db_options_get_text(msg->db, "onion_address", onion_address, ONION_ADDRESS_LEN);
-    db_options_get_bin(msg->db, "onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
-    db_options_get_bin(msg->db, "mailbox_id", mb_id, MAILBOX_ID_LEN);
-    db_options_get_bin(msg->db, "mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN);
-    nick_len = db_options_get_text(msg->db, "nickname", nick, CLIENT_NICK_MAX_LEN);
+    db_options_get_text(msg->db, "client_onion_address", onion_address, ONION_ADDRESS_LEN);
+    db_options_get_bin(msg->db, "client_onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
+    db_options_get_bin(msg->db, "client_mailbox_id", mb_id, MAILBOX_ID_LEN);
+    db_options_get_bin(msg->db, "client_mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN);
+    nick_len = db_options_get_text(msg->db, "client_nickname", nick, CLIENT_NICK_MAX_LEN);
 
     // Stuff all data into buffer
     evbuffer_add(phand->buffer, prot_header(PROT_FRIEND_REQUEST), PROT_HEADER_LEN);
@@ -180,7 +180,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     evbuffer_drain(input, ED25519_SIGNATURE_LEN);
 
     // Get local user's onion priv key from database
-    db_options_get_bin(msg->db, "onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
+    db_options_get_bin(msg->db, "client_onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
 
     // Time to send ACK, cleanup is disabled since ACK will do it
     phand->cleanup_cb = NULL;

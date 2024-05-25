@@ -14,6 +14,7 @@
 #include <prot_transaction.h>
 #include <prot_message.h>
 #include <prot_client_fetch.h>
+#include <prot_mb_account.h>
 
 // Internal bufferevent callbacks
 static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx);
@@ -240,11 +241,13 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
 
             // If queue is empty try to get handler for given message type
             if (queue_is_empty(pmain->recv_q)) {
-                void *msg_object;
 
-                msg_object = prot_handler_autogen(message_code, &phand, NULL, pmain->db);
+                if (pmain->mode == PROT_MODE_CLIENT)
+                    phand = prot_handler_autogen_client(message_code, pmain->db);
+                else
+                    phand = prot_handler_autogen_mailbox(message_code, pmain->db);
 
-                if (msg_object == NULL) {
+                if (phand == NULL) {
                     prot_main_fail(pmain, PROT_ERR_INVALID_MSG);
                     return;
                 }
@@ -460,59 +463,55 @@ void prot_main_tran_enable(struct prot_main *pmain, int yes) {
         prot_main_bev_write_cb(pmain->bev, pmain);
 }
 
-// Allocate new object for given message type and set given pointers
-// to handlers for that message, if pointers are NULL they are not set
-// function returns pointer to message object
-void *prot_handler_autogen(
-    enum prot_message_codes code,
-    struct prot_recv_handler **phand_recv,
-    struct prot_tran_handler **phand_tran,
-    sqlite3 *db
-) {
+// Allocate new receive handler for given message type, returns prot_recv_handler (on client)
+struct prot_recv_handler *prot_handler_autogen_client(enum prot_message_codes code, sqlite3 *db) {
+
     if (code == PROT_TRANSACTION_REQUEST) {
         struct prot_txn_req *msg;
         msg = prot_txn_req_new();
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
-
-        if (phand_tran)
-            *phand_tran = &(msg->htran);
-
-        return msg;
+        return &(msg->hrecv);
     }
 
     if (code == PROT_FRIEND_REQUEST) {
         struct prot_friend_req *msg;
         msg = prot_friend_req_new(db, NULL);
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
-
-        if (phand_tran)
-            *phand_tran = &(msg->htran);
-
-        return msg;
+        return &(msg->hrecv);
     }
 
     if (code == PROT_MESSAGE_CONTAINER) {
         struct prot_message *msg;
         msg = prot_message_client_new(db, PROT_MESSAGE_TO_CLIENT, NULL);
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
-
-        return msg;
+        return &(msg->hrecv);
     }
 
     if (code == PROT_CLIENT_FETCH) {
         struct prot_client_fetch *msg;
         msg = prot_client_fetch_new(db, NULL);
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
+        return &(msg->hrecv);
+    }
 
-        return msg;
+    return NULL;
+}
+
+// Allocate new receive handler for given message type, returns prot_recv_handler (on mailbox)
+struct prot_recv_handler *prot_handler_autogen_mailbox(enum prot_message_codes code, sqlite3 *db) {
+
+    if (code == PROT_TRANSACTION_REQUEST) {
+        struct prot_txn_req *msg;
+        msg = prot_txn_req_new();
+
+        return &(msg->hrecv);
+    }
+
+    if (code == PROT_MAILBOX_REGISTER) {
+        struct prot_mb_acc *msg;
+        msg = prot_mb_acc_register_new(db, NULL, NULL);
+
+        return &(msg->hrecv);
     }
 
     return NULL;

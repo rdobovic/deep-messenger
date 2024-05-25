@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <event2/event.h>
 #include <event2/buffer.h>
@@ -16,6 +17,8 @@
 #include <db_message.h>
 #include <base32.h>
 #include <prot_client_fetch.h>
+#include <prot_mb_account.h>
+#include <hooks.h>
 
 #define LOCALHOST 0x7F000001
 
@@ -26,6 +29,22 @@ void pmain_done_cb(struct prot_main *pmain, void *attr) {
 
 void ack_cb(int succ, void *arg) {
     debug("TRANSMITTED ACK: %s", succ ? "OK" : "INVALID");
+}
+
+void reg_status_cb(int ev, void *data, void *cbarg) {
+    int i;
+    struct prot_mb_acc_data *acc = data;
+    char mb_id[MAILBOX_ID_LEN * 2 + 1];
+
+    debug("Reg status: %s", ev == PROT_MB_ACCOUNT_EV_OK ? "OK" : "FAIL");
+
+    if (ev != PROT_MB_ACCOUNT_EV_OK) return;
+
+    for (i = 0; i < MAILBOX_ID_LEN; i++) {
+        sprintf(&mb_id[i * 2], "%02x", acc->mailbox_id[i]);
+    }
+
+    debug("Mailbox ID: %s", mb_id);
 }
 
 int main() {
@@ -40,6 +59,11 @@ int main() {
     struct db_message *dbmsg;
     struct prot_client_fetch *cfet;
     struct db_contact *cont;
+    struct prot_mb_acc *acc;
+
+    uint8_t mb_access_key[MAILBOX_ACCESS_KEY_LEN] = {0xbb, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xbb};
 
     base = event_base_new();
 
@@ -83,7 +107,15 @@ int main() {
 
     cont = db_contact_get_by_pk(dbg, 19, NULL);
     cfet = prot_client_fetch_new(dbg, cont);
-    prot_main_push_tran(pmain, &(cfet->htran));
+    //prot_main_push_tran(pmain, &(cfet->htran));
+
+    debug("Creating new MB register");
+    acc = prot_mb_acc_register_new(dbg, "g7kfkvigtyx45az27obwydfq3zrxfwl77so3n3tqv22cw3qvz6cuv4qd.onion", mb_access_key);
+    debug("Adding hooks");
+    hook_add(acc->hooks, PROT_MB_ACCOUNT_EV_OK, reg_status_cb, NULL);
+    hook_add(acc->hooks, PROT_MB_ACCOUNT_EV_FAIL, reg_status_cb, NULL);
+    debug("Adding hooks");
+    prot_main_push_tran(pmain, &(acc->htran));
 
     debug("init end");
 

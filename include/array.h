@@ -1,3 +1,6 @@
+#ifndef _INCLUDE_ARRAY_H_
+#define _INCLUDE_ARRAY_H_
+
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -35,3 +38,5 @@ void array_free(void *arr_s);
 
 // Get current length of given array (elements allocated)
 int array_length(void *arr_s);
+
+#endif

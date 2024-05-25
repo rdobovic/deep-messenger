@@ -1,3 +1,6 @@
+#ifndef _INCLUDE_HOOKS_H_
+#define _INCLUDE_HOOKS_H_
+
 // Callback called when event occurs
 typedef void (*hook_callback)(int event_type, void *data, void *cbarg);
 
@@ -28,3 +31,5 @@ void hook_remove(struct hook_list *list, int hevent, hook_callback cb, void *cba
 
 // Call all hooks for given event
 void hook_list_call(struct hook_list *list, int hevent, void *data);
+
+#endif
