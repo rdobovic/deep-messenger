@@ -23,14 +23,13 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
     // Hooks and account data will be freed by acc granted handler
     acc->hooks = NULL;
     acc->cl_acc = NULL;
-    acc->success = 1;
 }
 
 // Free message handler object
 static void tran_cleanup(struct prot_tran_handler *phand) {
     struct prot_mb_acc *acc = phand->msg;
 
-    if (!acc->success)
+    if (!phand->success)
         hook_list_call(acc->hooks, PROT_MB_ACCOUNT_EV_FAIL, acc->cl_acc);
 
     prot_mb_acc_register_free(acc);
@@ -116,7 +115,7 @@ struct prot_mb_acc * prot_mb_acc_register_new(sqlite3 *db, const char *onion_add
 
     if (onion_address && access_key) {
         msg->cl_acc = safe_malloc(sizeof(struct prot_mb_acc_data), 
-            "Failed to allocate memory for prot_acc_data");
+            "Failed to allocate memory for prot_mb_acc_data");
         
         memcpy(msg->cl_acc->access_key, access_key, MAILBOX_ACCESS_KEY_LEN);
         memcpy(msg->cl_acc->onion_address, onion_address, ONION_ADDRESS_LEN);

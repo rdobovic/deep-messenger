@@ -65,6 +65,9 @@ typedef void (*prot_recv_handle_cb)(struct prot_main *pmain, struct prot_recv_ha
 struct prot_recv_handler {
     enum prot_message_codes msg_code;
     void *msg;
+    // Cleanup functions can read this value to determine if message has been
+    // processed successfully (1 = success, 0 = failure)
+    int success;
     // If set to true prot_main will check first field after protocol
     // header for transaction ID, if ID is invalid it will close the connection
     int require_transaction;
@@ -83,6 +86,9 @@ typedef void (*prot_tran_setup_cb)(struct prot_main *pmain, struct prot_tran_han
 struct prot_tran_handler {
     enum prot_message_codes msg_code;
     void *msg;
+    // Cleanup functions can read this value to determine if message has been
+    // processed successfully (1 = success, 0 = failure)
+    int success;
     // Buffer filled with protocol message
     struct evbuffer *buffer;
     // Callback to call once message is transmitted

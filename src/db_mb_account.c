@@ -121,7 +121,7 @@ struct db_mb_account * db_mb_account_get_by_mbid(sqlite3 *db, uint8_t *mbid, str
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to fetch mailbox account from database (by mailbox id)");
 
-    if (sqlite3_bind_blob(stmt, 1, mbid, MAILBOX_ACCOUNT_KEY_PUB_LEN, NULL) != SQLITE_OK)
+    if (sqlite3_bind_blob(stmt, 1, mbid, MAILBOX_ID_LEN, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to bind mailbox account mailbox id, when fetching");
 
     acc = db_mb_account_process_row(db, stmt, dest);

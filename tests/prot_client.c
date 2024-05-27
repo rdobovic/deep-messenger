@@ -22,6 +22,8 @@
 
 #define LOCALHOST 0x7F000001
 
+struct prot_main *pmain;
+
 void pmain_done_cb(struct prot_main *pmain, void *attr) {
     uint8_t *i = pmain->transaction_id;
     debug("Finished with transaction id: %x%x%x", i[0], i[1], i[2]);
@@ -31,8 +33,13 @@ void ack_cb(int succ, void *arg) {
     debug("TRANSMITTED ACK: %s", succ ? "OK" : "INVALID");
 }
 
+void del_status_cb(int ev, void *data, void *cbarg) {
+    debug("ACOUNT DELETE status: %s", ev == PROT_MB_ACCOUNT_EV_OK ? "OK" : "FAIL");
+}
+
 void reg_status_cb(int ev, void *data, void *cbarg) {
     int i;
+    struct prot_mb_acc *accdel;
     struct prot_mb_acc_data *acc = data;
     char mb_id[MAILBOX_ID_LEN * 2 + 1];
 
@@ -45,6 +52,15 @@ void reg_status_cb(int ev, void *data, void *cbarg) {
     }
 
     debug("Mailbox ID: %s", mb_id);
+    debug("Starting mailbox delete request, press key to continue");
+
+    getchar();
+    debug("GO GO GO");
+
+    accdel = prot_mb_acc_delete_new(dbg, acc->onion_address, acc->mailbox_id, acc->sig_priv_key);
+    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_OK, del_status_cb, NULL);
+    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_FAIL, del_status_cb, NULL);
+    prot_main_push_tran(pmain, &(accdel->htran));
 }
 
 int main() {
@@ -52,7 +68,6 @@ int main() {
     struct event_base *base;
     struct sockaddr_in sin;
     struct bufferevent *bev;
-    struct prot_main *pmain;
     struct prot_txn_req *treq;
     struct prot_friend_req *freq;
     struct prot_message *pmsg;

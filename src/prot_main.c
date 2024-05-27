@@ -72,6 +72,7 @@ void prot_main_free(struct prot_main *pmain) {
     while (!queue_is_empty(pmain->recv_q)) {
         struct prot_recv_handler *phand = queue_peek(pmain->recv_q, 0);
 
+        phand->success = 0;
         if (phand->cleanup_cb)
             phand->cleanup_cb(phand);
         queue_dequeue(pmain->recv_q, NULL);
@@ -82,6 +83,7 @@ void prot_main_free(struct prot_main *pmain) {
     while (!queue_is_empty(pmain->tran_q)) {
         struct prot_tran_handler *phand = queue_peek(pmain->tran_q, 0);
 
+        phand->success = 0;
         if (phand->cleanup_cb)
             phand->cleanup_cb(phand);
         queue_dequeue(pmain->tran_q, NULL);
@@ -147,9 +149,9 @@ void prot_main_recv_done(struct prot_main *pmain) {
 // Push new message into transmission queue, returns zero on success
 void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phand) {
     // Insert handler into queue
-    debug("pushing into queue %p", phand);
+    debug("pushing into T queue %p", phand);
     queue_enqueue(pmain->tran_q, phand);
-    debug("pushed into queue");
+    debug("pushed into T queue");
 
     // If bufferevent is ready and no transmission is in progress
     if (pmain->bev_ready && !pmain->tran_in_progress) {
@@ -157,7 +159,7 @@ void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phan
         prot_main_bev_write_cb(pmain->bev, pmain);
     }
 
-    debug("pushed success");
+    debug("pushed T success");
 }
 
 // Push new message receiver into receiver queue, this is done when you are
@@ -309,6 +311,8 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
         // If handler is done run the handler cleanup and
         // remove handler from the queue
         if (pmain->current_recv_done) {
+            phand->success = 1;
+
             if (phand->cleanup_cb) {
                 phand->cleanup_cb(phand);
 
@@ -351,7 +355,7 @@ static void prot_main_bev_write_cb(struct bufferevent *bev, void *ctx) {
 
     phand = queue_peek(pmain->tran_q, 0);
 
-    debug("Got handler to write");
+    debug("Got handler to write %p", phand);
 
     // If there is transmission in progress it is done now
     if (pmain->tran_in_progress) {
@@ -365,6 +369,8 @@ static void prot_main_bev_write_cb(struct bufferevent *bev, void *ctx) {
                 return;
             }
         }
+
+        phand->success = 1;
         if (phand->cleanup_cb) {
             phand->cleanup_cb(phand);
 
@@ -510,6 +516,13 @@ struct prot_recv_handler *prot_handler_autogen_mailbox(enum prot_message_codes c
     if (code == PROT_MAILBOX_REGISTER) {
         struct prot_mb_acc *msg;
         msg = prot_mb_acc_register_new(db, NULL, NULL);
+
+        return &(msg->hrecv);
+    }
+
+    if (code == PROT_MAILBOX_DEL_ACCOUNT) {
+        struct prot_mb_acc *msg;
+        msg = prot_mb_acc_delete_new(db, NULL, NULL, NULL);
 
         return &(msg->hrecv);
     }

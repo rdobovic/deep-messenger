@@ -15,8 +15,6 @@
 // Called when transmission finished successfully
 static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_mb_acc *acc = phand->msg;
-
-    acc->success = 1;
     db_mb_account_save(acc->db, acc->mb_acc);
 }
 
@@ -43,7 +41,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 static void recv_cleanup(struct prot_recv_handler *phand) {
     struct prot_mb_acc *acc = phand->msg;
 
-    if (!acc->success)
+    if (!phand->success)
         hook_list_call(acc->hooks, PROT_MB_ACCOUNT_EV_FAIL, acc->cl_acc);
 
     prot_mb_acc_granted_free(acc);
@@ -70,7 +68,6 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     evbuffer_drain(input, PROT_HEADER_LEN + TRANSACTION_ID_LEN);
     evbuffer_remove(input, acc->cl_acc->mailbox_id, MAILBOX_ID_LEN);
 
-    acc->success = 1;
     hook_list_call(acc->hooks, PROT_MB_ACCOUNT_EV_OK, acc->cl_acc);
 
     evbuffer_drain(input, ED25519_SIGNATURE_LEN);
