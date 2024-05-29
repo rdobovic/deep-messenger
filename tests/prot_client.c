@@ -18,6 +18,7 @@
 #include <base32.h>
 #include <prot_client_fetch.h>
 #include <prot_mb_account.h>
+#include <prot_mb_set_contacts.h>
 #include <hooks.h>
 
 #define LOCALHOST 0x7F000001
@@ -37,9 +38,25 @@ void del_status_cb(int ev, void *data, void *cbarg) {
     debug("ACOUNT DELETE status: %s", ev == PROT_MB_ACCOUNT_EV_OK ? "OK" : "FAIL");
 }
 
+void cont_status_cb(int ev, void *data, void *cbarg) {
+    struct prot_mb_set_contacts *msg = data;
+    struct prot_mb_acc *accdel;
+
+    debug("CONTACTS SET status: %s", ev == PROT_MB_ACCOUNT_EV_OK ? "OK" : "FAIL");
+    debug("Starting mailbox delete request, press key to continue");
+    getchar();
+
+    accdel = prot_mb_acc_delete_new(dbg, msg->onion_address, msg->cl_mb_id, msg->cl_sig_priv_key);
+    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_OK, del_status_cb, NULL);
+    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_FAIL, del_status_cb, NULL);
+    prot_main_push_tran(pmain, &(accdel->htran));
+}
+
 void reg_status_cb(int ev, void *data, void *cbarg) {
     int i;
-    struct prot_mb_acc *accdel;
+    int n_conts;
+    struct db_contact **conts;
+    struct prot_mb_set_contacts *acc_cont;
     struct prot_mb_acc_data *acc = data;
     char mb_id[MAILBOX_ID_LEN * 2 + 1];
 
@@ -52,15 +69,15 @@ void reg_status_cb(int ev, void *data, void *cbarg) {
     }
 
     debug("Mailbox ID: %s", mb_id);
-    debug("Starting mailbox delete request, press key to continue");
-
+    debug("Starting mailbox set contacts, press key to continue");
     getchar();
-    debug("GO GO GO");
 
-    accdel = prot_mb_acc_delete_new(dbg, acc->onion_address, acc->mailbox_id, acc->sig_priv_key);
-    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_OK, del_status_cb, NULL);
-    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_FAIL, del_status_cb, NULL);
-    prot_main_push_tran(pmain, &(accdel->htran));
+    conts = db_contact_get_all(dbg, &n_conts);
+    debug("Contacts to send: %d", n_conts);
+    acc_cont = prot_mb_set_contacts_new(dbg, acc->onion_address, acc->mailbox_id, acc->sig_priv_key, conts, n_conts);
+    hook_add(acc_cont->hooks, PROT_MB_ACCOUNT_EV_OK, cont_status_cb, NULL);
+    hook_add(acc_cont->hooks, PROT_MB_ACCOUNT_EV_FAIL, cont_status_cb, NULL);
+    prot_main_push_tran(pmain, &(acc_cont->htran));
 }
 
 int main() {
@@ -95,6 +112,7 @@ int main() {
     }
 
     db_init_global("deep_messenger.db");
+    db_init_schema(dbg);
 
     pmain = prot_main_new(base, dbg);
     prot_main_assign(pmain, bev);

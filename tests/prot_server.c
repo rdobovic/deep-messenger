@@ -51,6 +51,7 @@ int main()
 
     debug_set_fp(stdout);
     db_init_global("deep_messenger2.db");
+    db_init_schema(dbg);
 
     base = event_base_new();
 

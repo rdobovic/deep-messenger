@@ -13,7 +13,7 @@
 #include <debug.h>
 
 // Called when ack is received after transmission
-void ack_received(int ack_success, struct prot_main *pmain, void *cbarg) {
+static void ack_received(int ack_success, struct prot_main *pmain, void *cbarg) {
     struct prot_mb_acc *acc = cbarg;
 
     hook_list_call(acc->hooks, 
@@ -52,7 +52,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 }
 
 // Called when ack is succesfully sent after receiveing account delete
-void ack_sent(int ack_success, struct prot_main *pmain, void *cbarg) {
+static void ack_sent(int ack_success, struct prot_main *pmain, void *cbarg) {
     struct prot_mb_acc *acc = cbarg;
 
     debug("HERE BEFORE %d", acc->hrecv.require_transaction);
