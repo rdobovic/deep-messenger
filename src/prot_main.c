@@ -33,12 +33,21 @@ static void prot_main_fail(struct prot_main *pmain, enum prot_status_codes statu
     prot_main_free(pmain);
 }
 
-static void prot_main_done_check(struct prot_main *pmain) {
+// Returns 0 normally and 1 if protocol handler has been freed
+static int prot_main_done_check(struct prot_main *pmain) {
     debug("Queue state recv(%d) tran(%d)", queue_get_length(pmain->recv_q), queue_get_length(pmain->tran_q));
     if (queue_is_empty(pmain->recv_q) && queue_is_empty(pmain->tran_q)) {
         hook_list_call(pmain->hooks, PROT_MAIN_EV_DONE, pmain);
         debug("Main protocol handler done processing all messages");
+        
+        if (pmain->run_free) {
+            debug("Time to free main protocol handler");
+            prot_main_free(pmain);
+            return 1;
+        }
     }
+
+    return 0;
 }
 
 // Allocate new main protocol object
@@ -93,6 +102,13 @@ void prot_main_free(struct prot_main *pmain) {
         bufferevent_free(pmain->bev);
     hook_list_free(pmain->hooks);
     free(pmain);
+}
+
+// Used to free main protocol handler from within hook callback
+// associated with PROT_MAIN_EV_DONE event, object is freed after
+// callback is executed
+void prot_main_defer_free(struct prot_main *pmain) {
+    pmain->run_free = 1;
 }
 
 // Connect to given TOR client socks server and try to contact
@@ -313,7 +329,9 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
             pmain->current_recv_done = 0;
             pmain->message_check_done = 0;
 
-            prot_main_done_check(pmain);
+
+            if (prot_main_done_check(pmain))
+                return;
         } else {
             return;
         }
@@ -370,7 +388,8 @@ static void prot_main_bev_write_cb(struct bufferevent *bev, void *ctx) {
         queue_dequeue(pmain->tran_q, NULL);
         pmain->tran_in_progress = 0;
 
-        prot_main_done_check(pmain);
+        if (prot_main_done_check(pmain))
+            return;
         if (queue_is_empty(pmain->tran_q))
             return;
 

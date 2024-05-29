@@ -108,6 +108,7 @@ struct prot_tran_handler {
 struct prot_main {
     struct hook_list *hooks;
 
+    int run_free;   // Protocol main should be freed after all hooks are executed
     enum prot_modes mode;
     enum prot_status_codes status;
 
@@ -139,6 +140,11 @@ struct prot_main *prot_main_new(struct event_base *base, sqlite3 *db);
 
 // Call cleanup for all in the queue and free main protocol object
 void prot_main_free(struct prot_main *pmain);
+
+// Used to free main protocol handler from within hook callback
+// associated with PROT_MAIN_EV_DONE event, object is freed after
+// callback is executed
+void prot_main_defer_free(struct prot_main *pmain);
 
 // Called from inside of callback function, notifies given pmain
 // object that current receiver is done receiving

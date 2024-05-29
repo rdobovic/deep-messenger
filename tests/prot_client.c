@@ -30,6 +30,7 @@ void pmain_done_cb(int ev, void *data, void *cbarg) {
 
     uint8_t *i = pmain->transaction_id;
     debug("Finished with transaction id: %x%x%x", i[0], i[1], i[2]);
+    //prot_main_defer_free(pmain);
 }
 
 void del_status_cb(int ev, void *data, void *cbarg) {
