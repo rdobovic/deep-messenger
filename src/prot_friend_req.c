@@ -40,7 +40,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Free friend request object
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_friend_req *msg = phand->msg;
     prot_friend_req_free(msg);
 }
@@ -87,7 +87,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 }
 
 // Free friend request object
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_friend_req *msg = phand->msg;
     prot_friend_req_free(msg);
 }

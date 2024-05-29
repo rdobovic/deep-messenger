@@ -8,6 +8,7 @@
 #include <event2/event.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
+#include <hooks.h>
 
 #include <debug.h>
 #include <prot_friend_req.h>
@@ -27,9 +28,7 @@ static void prot_main_socks5_cb(struct bufferevent *bev, enum socks5_errors err,
 
 // Call close callback and free protocol main
 static void prot_main_fail(struct prot_main *pmain, enum prot_status_codes status) {
-    if (pmain->close_cb) {
-        pmain->close_cb(pmain, status, pmain->cbarg);
-    }
+    hook_list_call(pmain->hooks, PROT_MAIN_EV_CLOSE, pmain);
     debug("Main protocol handler failed with error: %s", prot_main_error_string(status));
     prot_main_free(pmain);
 }
@@ -37,9 +36,7 @@ static void prot_main_fail(struct prot_main *pmain, enum prot_status_codes statu
 static void prot_main_done_check(struct prot_main *pmain) {
     debug("Queue state recv(%d) tran(%d)", queue_get_length(pmain->recv_q), queue_get_length(pmain->tran_q));
     if (queue_is_empty(pmain->recv_q) && queue_is_empty(pmain->tran_q)) {
-        if (pmain->done_cb) {
-            pmain->done_cb(pmain, pmain->cbarg);
-        }
+        hook_list_call(pmain->hooks, PROT_MAIN_EV_DONE, pmain);
         debug("Main protocol handler done processing all messages");
     }
 }
@@ -56,6 +53,7 @@ struct prot_main *prot_main_new(struct event_base *base, sqlite3 *db) {
     // Set event base and databse
     pmain->db = db;
     pmain->event_base = base;
+    pmain->hooks = hook_list_new();
 
     // Allocate queues
     pmain->tran_q = queue_new(sizeof(struct prot_tran_handler));
@@ -75,7 +73,7 @@ void prot_main_free(struct prot_main *pmain) {
 
         phand->success = 0;
         if (phand->cleanup_cb)
-            phand->cleanup_cb(phand);
+            phand->cleanup_cb(pmain, phand);
         queue_dequeue(pmain->recv_q, NULL);
     }
     queue_free(pmain->recv_q);
@@ -86,13 +84,14 @@ void prot_main_free(struct prot_main *pmain) {
 
         phand->success = 0;
         if (phand->cleanup_cb)
-            phand->cleanup_cb(phand);
+            phand->cleanup_cb(pmain, phand);
         queue_dequeue(pmain->tran_q, NULL);
     }
     queue_free(pmain->tran_q);
 
     if (pmain->bev)
         bufferevent_free(pmain->bev);
+    hook_list_free(pmain->hooks);
     free(pmain);
 }
 
@@ -168,19 +167,6 @@ void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phan
 void prot_main_push_recv(struct prot_main *pmain, struct prot_recv_handler *phand) {
     // Insert handler into queue
     queue_enqueue(pmain->recv_q, phand);
-}
-
-// Set callback functions
-void prot_main_setcb(
-    struct prot_main *pmain,
-    prot_main_done_cb done_cb,
-    prot_main_close_cb close_cb,
-    void *cbarg
-) {
-    debug("Settings callbacks for pmain");
-    pmain->cbarg = cbarg;
-    pmain->done_cb = done_cb;
-    pmain->close_cb = close_cb;
 }
 
 // Assign protocol connection handler to given bufferevent
@@ -315,7 +301,7 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
             phand->success = 1;
 
             if (phand->cleanup_cb) {
-                phand->cleanup_cb(phand);
+                phand->cleanup_cb(pmain, phand);
 
                 if (pmain->status != PROT_STATUS_OK) {
                     prot_main_fail(pmain, pmain->status);
@@ -373,7 +359,7 @@ static void prot_main_bev_write_cb(struct bufferevent *bev, void *ctx) {
 
         phand->success = 1;
         if (phand->cleanup_cb) {
-            phand->cleanup_cb(phand);
+            phand->cleanup_cb(pmain, phand);
 
             if (pmain->status != PROT_STATUS_OK) {
                 prot_main_fail(pmain, pmain->status);

@@ -16,8 +16,8 @@
 static void ack_received(int ack_success, struct prot_main *pmain, void *cbarg) {
     struct prot_mb_acc *acc = cbarg;
 
-    hook_list_call(acc->hooks, 
-        ack_success ? PROT_MB_ACCOUNT_EV_OK : PROT_MB_ACCOUNT_EV_FAIL, acc->cl_acc);
+    hook_list_call(pmain->hooks,
+        ack_success ? PROT_MB_ACC_DELETE_EV_OK : PROT_MB_ACC_DELETE_EV_FAIL, acc->cl_acc);
     prot_mb_acc_delete_free(acc);
 }
 
@@ -33,10 +33,10 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Called to free handler
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_mb_acc *acc = phand->msg;
 
-    hook_list_call(acc->hooks, PROT_MB_ACCOUNT_EV_FAIL, acc->cl_acc);
+    hook_list_call(pmain->hooks, PROT_MB_ACC_DELETE_EV_FAIL, acc->cl_acc);
     prot_mb_acc_delete_free(acc);
 }
 
@@ -66,7 +66,7 @@ static void ack_sent(int ack_success, struct prot_main *pmain, void *cbarg) {
 }
 
 // Called to free handler
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_mb_acc *acc = phand->msg;
     prot_mb_acc_delete_free(acc);
 }
@@ -115,7 +115,6 @@ struct prot_mb_acc * prot_mb_acc_delete_new(sqlite3 *db, const char *onion_addre
     memset(acc, 0, sizeof(struct prot_mb_acc));
 
     acc->db = db;
-    acc->hooks = hook_list_new();
     
     if (onion_address && mb_id && mb_sig_priv_key) {
         acc->cl_acc = safe_malloc(sizeof(struct prot_mb_acc_data), 
@@ -147,8 +146,6 @@ struct prot_mb_acc * prot_mb_acc_delete_new(sqlite3 *db, const char *onion_addre
 void prot_mb_acc_delete_free(struct prot_mb_acc *msg) {
     if (!msg) return;
 
-    if (msg->hooks)
-        hook_list_free(msg->hooks);
     if (msg->cl_acc)
         free(msg->cl_acc);
     if (msg->mb_acc)

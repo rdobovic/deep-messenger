@@ -31,7 +31,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Called to free memory taken by handler object when transmission is done
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_message_list *msg = phand->msg;
     prot_message_list_free(msg);
 }
@@ -111,7 +111,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 }
 
 // Called to free memeory taken by the handler object when message is processed
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_message_list *msg = phand->msg;
     prot_message_list_free(msg);
 }

@@ -20,7 +20,7 @@
 static void ack_received(int ack_success, struct prot_main *pmain, void *cbarg) {
     struct prot_mb_set_contacts *msg = cbarg;
         
-    hook_list_call(msg->hooks, 
+    hook_list_call(pmain->hooks,
         ack_success ? PROT_MB_SET_CONTACTS_EV_OK : PROT_MB_SET_CONTACTS_EV_FAIL, msg);
     prot_mb_set_contacts_free(msg);
 }
@@ -36,10 +36,10 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Called to free handler
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_mb_set_contacts *msg = phand->msg;
 
-    hook_list_call(msg->hooks, PROT_MB_SET_CONTACTS_EV_FAIL, msg);
+    hook_list_call(pmain->hooks, PROT_MB_SET_CONTACTS_EV_FAIL, msg);
     prot_mb_set_contacts_free(msg);
 }
 
@@ -77,7 +77,7 @@ static void ack_sent(int ack_success, struct prot_main *pmain, void *cbarg) {
 }
 
 // Called to free handler
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_mb_set_contacts *msg = phand->msg;
     prot_mb_set_contacts_free(msg);
 }
@@ -155,7 +155,6 @@ struct prot_mb_set_contacts * prot_mb_set_contacts_new(
     memset(msg, 0, sizeof(struct prot_mb_set_contacts));
 
     msg->db = db;
-    msg->hooks = hook_list_new();
 
     if (onion_address && cl_mb_id && cl_sig_priv_key) {
         memcpy(msg->cl_mb_id, cl_mb_id, MAILBOX_ID_LEN);
@@ -188,8 +187,6 @@ struct prot_mb_set_contacts * prot_mb_set_contacts_new(
 void prot_mb_set_contacts_free(struct prot_mb_set_contacts *msg) {
     if (!msg) return;
 
-    if (msg->hooks) 
-        hook_list_free(msg->hooks);
     if (msg->mb_acc)
         db_mb_account_free(msg->mb_acc);
     if (msg->cl_conts)

@@ -15,7 +15,7 @@
  */
 
 // Callback functions
-static void req_tran_cleanup(struct prot_tran_handler *phand) {
+static void req_tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_txn_req *msg = phand->msg;
     prot_txn_req_free(msg);
 }
@@ -36,7 +36,7 @@ static void req_tran_done(struct prot_main *pmain, struct prot_tran_handler *pha
     prot_main_tran_enable(pmain, 0);
 }
 
-static void req_recv_cleanup(struct prot_recv_handler *phand) {
+static void req_recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_txn_req *msg = phand->msg;
     prot_txn_req_free(msg);
 }
@@ -89,7 +89,7 @@ void prot_txn_req_free(struct prot_txn_req *msg) {
  */
 
 // Callback functions
-static void res_tran_cleanup(struct prot_tran_handler *phand) {
+static void res_tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_txn_res *msg = phand->msg;
     prot_txn_res_free(msg);
 }
@@ -116,7 +116,7 @@ static void res_tran_done(struct prot_main *pmain, struct prot_tran_handler *pha
     memcpy(pmain->transaction_id, msg->txn_id, TRANSACTION_ID_LEN);
 }
 
-static void res_recv_cleanup(struct prot_recv_handler *phand) {
+static void res_recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_txn_res *msg = phand->msg;
     prot_txn_res_free(msg);
 } 

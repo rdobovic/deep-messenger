@@ -25,30 +25,28 @@
 
 struct prot_main *pmain;
 
-void pmain_done_cb(struct prot_main *pmain, void *attr) {
+void pmain_done_cb(int ev, void *data, void *cbarg) {
+    struct prot_main *pmain = data;
+
     uint8_t *i = pmain->transaction_id;
     debug("Finished with transaction id: %x%x%x", i[0], i[1], i[2]);
 }
 
-void ack_cb(int succ, void *arg) {
-    debug("TRANSMITTED ACK: %s", succ ? "OK" : "INVALID");
-}
-
 void del_status_cb(int ev, void *data, void *cbarg) {
-    debug("ACOUNT DELETE status: %s", ev == PROT_MB_ACCOUNT_EV_OK ? "OK" : "FAIL");
+    debug("ACOUNT DELETE status: %s", ev == PROT_MB_ACC_DELETE_EV_OK ? "OK" : "FAIL");
 }
 
 void cont_status_cb(int ev, void *data, void *cbarg) {
     struct prot_mb_set_contacts *msg = data;
     struct prot_mb_acc *accdel;
 
-    debug("CONTACTS SET status: %s", ev == PROT_MB_ACCOUNT_EV_OK ? "OK" : "FAIL");
+    debug("CONTACTS SET status: %s", ev == PROT_MB_SET_CONTACTS_EV_OK ? "OK" : "FAIL");
     debug("Starting mailbox delete request, press key to continue");
     getchar();
 
     accdel = prot_mb_acc_delete_new(dbg, msg->onion_address, msg->cl_mb_id, msg->cl_sig_priv_key);
-    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_OK, del_status_cb, NULL);
-    hook_add(accdel->hooks, PROT_MB_ACCOUNT_EV_FAIL, del_status_cb, NULL);
+    hook_add(pmain->hooks, PROT_MB_ACC_DELETE_EV_OK, del_status_cb, NULL);
+    hook_add(pmain->hooks, PROT_MB_ACC_DELETE_EV_FAIL, del_status_cb, NULL);
     prot_main_push_tran(pmain, &(accdel->htran));
 }
 
@@ -60,9 +58,9 @@ void reg_status_cb(int ev, void *data, void *cbarg) {
     struct prot_mb_acc_data *acc = data;
     char mb_id[MAILBOX_ID_LEN * 2 + 1];
 
-    debug("Reg status: %s", ev == PROT_MB_ACCOUNT_EV_OK ? "OK" : "FAIL");
+    debug("Reg status: %s", ev == PROT_MB_ACC_REGISTER_EV_OK ? "OK" : "FAIL");
 
-    if (ev != PROT_MB_ACCOUNT_EV_OK) return;
+    if (ev != PROT_MB_ACC_REGISTER_EV_OK) return;
 
     for (i = 0; i < MAILBOX_ID_LEN; i++) {
         sprintf(&mb_id[i * 2], "%02x", acc->mailbox_id[i]);
@@ -75,8 +73,8 @@ void reg_status_cb(int ev, void *data, void *cbarg) {
     conts = db_contact_get_all(dbg, &n_conts);
     debug("Contacts to send: %d", n_conts);
     acc_cont = prot_mb_set_contacts_new(dbg, acc->onion_address, acc->mailbox_id, acc->sig_priv_key, conts, n_conts);
-    hook_add(acc_cont->hooks, PROT_MB_ACCOUNT_EV_OK, cont_status_cb, NULL);
-    hook_add(acc_cont->hooks, PROT_MB_ACCOUNT_EV_FAIL, cont_status_cb, NULL);
+    hook_add(pmain->hooks, PROT_MB_SET_CONTACTS_EV_OK, cont_status_cb, NULL);
+    hook_add(pmain->hooks, PROT_MB_SET_CONTACTS_EV_FAIL, cont_status_cb, NULL);
     prot_main_push_tran(pmain, &(acc_cont->htran));
 }
 
@@ -116,7 +114,7 @@ int main() {
 
     pmain = prot_main_new(base, dbg);
     prot_main_assign(pmain, bev);
-    prot_main_setcb(pmain, pmain_done_cb, NULL, NULL);
+    hook_add(pmain->hooks, PROT_MAIN_EV_DONE, pmain_done_cb, NULL);
 
     treq = prot_txn_req_new();
     prot_main_push_tran(pmain, &(treq->htran));
@@ -129,25 +127,25 @@ int main() {
     dbmsg->type = DB_MESSAGE_TEXT;
     dbmsg->contact_id = 19;
     db_message_gen_id(dbmsg);
-    db_message_set_text(dbmsg, "This is test message", 20);
+    db_message_set_text(dbmsg, "Hi how are you feeling ??", 25);
     //memcpy(dbmsg->body_nick, "rokica", 6);
     //dbmsg->body_nick_len = 6;
     dbmsg->status = DB_MESSAGE_STATUS_UNDELIVERED;
-    db_message_save(dbg, dbmsg);
+    //db_message_save(dbg, dbmsg);
 
     pmsg = prot_message_to_client_new(dbg, dbmsg);
-    prot_main_push_tran(pmain, &(pmsg->htran));
+    //prot_main_push_tran(pmain, &(pmsg->htran));
 
     cont = db_contact_get_by_pk(dbg, 19, NULL);
     cfet = prot_client_fetch_new(dbg, cont);
     //prot_main_push_tran(pmain, &(cfet->htran));
-    /*
+    
     debug("Creating new MB register");
     acc = prot_mb_acc_register_new(dbg, "g7kfkvigtyx45az27obwydfq3zrxfwl77so3n3tqv22cw3qvz6cuv4qd.onion", mb_access_key);
     debug("Adding hooks");
-    hook_add(acc->hooks, PROT_MB_ACCOUNT_EV_OK, reg_status_cb, NULL);
-    hook_add(acc->hooks, PROT_MB_ACCOUNT_EV_FAIL, reg_status_cb, NULL);
-    prot_main_push_tran(pmain, &(acc->htran));*/
+    hook_add(pmain->hooks, PROT_MB_ACC_REGISTER_EV_OK, reg_status_cb, NULL);
+    hook_add(pmain->hooks, PROT_MB_ACC_REGISTER_EV_FAIL, reg_status_cb, NULL);
+    prot_main_push_tran(pmain, &(acc->htran));
 
     debug("init end");
 

@@ -9,6 +9,7 @@
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 #include <constants.h>
+#include <hooks.h>
 
 #define PROT_QUEUE_LEN 32
 #define PROT_ERROR_MAX_LEN 127
@@ -51,13 +52,18 @@ enum prot_status_codes {
     PROT_ERR_TRANSACTION,
 };
 
+enum prot_main_events {
+    PROT_MAIN_EV_DONE  = 0x0001,
+    PROT_MAIN_EV_CLOSE = 0x0002,
+};
+
 // Struct predefinition
 struct prot_main;
 struct prot_recv_handler;
 struct prot_tran_handler;
 
 // Callback used to free handle memory after it's done processing input
-typedef void (*prot_recv_cleanup_cb)(struct prot_recv_handler *phand);
+typedef void (*prot_recv_cleanup_cb)(struct prot_main *pmain, struct prot_recv_handler *phand);
 // Callback called to handle incomming data, must return 1 once it received and processed
 // all the data, and 0 if not all data arrived yet
 typedef void (*prot_recv_handle_cb)(struct prot_main *pmain, struct prot_recv_handler *phand);
@@ -77,7 +83,7 @@ struct prot_recv_handler {
 };
 
 // Callback used to free handle memory after it's done processing input
-typedef void (*prot_tran_cleanup_cb)(struct prot_tran_handler *phand);
+typedef void (*prot_tran_cleanup_cb)(struct prot_main *pmain, struct prot_tran_handler *phand);
 // Called after transmission is done
 typedef void (*prot_tran_done_cb)(struct prot_main *pmain, struct prot_tran_handler *phand);
 // Called before transmission
@@ -97,18 +103,10 @@ struct prot_tran_handler {
     prot_tran_cleanup_cb cleanup_cb;
 };
 
-// Called when connecting and all messages are processed successfully
-typedef void (*prot_main_done_cb)(struct prot_main *pmain, void *attr);
-
-// Called when connection fails, or is closed
-typedef void (*prot_main_close_cb)(struct prot_main *pmain, enum prot_status_codes status, void *attr);
-
 // Main connection handler, attached to bufferevent connection
 // to handle communication
 struct prot_main {
-    void *cbarg;                 // Pointer given to callbacks
-    prot_main_done_cb done_cb;   // Called when all messages are processed and the transmition queue is empty
-    prot_main_close_cb close_cb; // Called when connection is closed
+    struct hook_list *hooks;
 
     enum prot_modes mode;
     enum prot_status_codes status;
@@ -173,14 +171,6 @@ void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phan
 // Push new message receiver into receiver queue, this is done when you are
 // expecting message to arrive (response), returns zero on success
 void prot_main_push_recv(struct prot_main *pmain, struct prot_recv_handler *phand);
-
-// Set callback functions
-void prot_main_setcb(
-    struct prot_main *pmain,
-    prot_main_done_cb done_cb,
-    prot_main_close_cb close_cb,
-    void *cbarg
-);
 
 // Used to enable/disable transmission on main protocol handler
 void prot_main_tran_enable(struct prot_main *pmain, int yes);

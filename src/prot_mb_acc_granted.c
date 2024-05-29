@@ -19,7 +19,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Called to free handler
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_mb_acc *acc = phand->msg;
     prot_mb_acc_granted_free(acc);
 }
@@ -38,11 +38,11 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 }
 
 // Called to free handler
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_mb_acc *acc = phand->msg;
 
     if (!phand->success)
-        hook_list_call(acc->hooks, PROT_MB_ACCOUNT_EV_FAIL, acc->cl_acc);
+        hook_list_call(pmain->hooks, PROT_MB_ACC_REGISTER_EV_FAIL, acc->cl_acc);
 
     prot_mb_acc_granted_free(acc);
 }
@@ -68,7 +68,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     evbuffer_drain(input, PROT_HEADER_LEN + TRANSACTION_ID_LEN);
     evbuffer_remove(input, acc->cl_acc->mailbox_id, MAILBOX_ID_LEN);
 
-    hook_list_call(acc->hooks, PROT_MB_ACCOUNT_EV_OK, acc->cl_acc);
+    hook_list_call(pmain->hooks, PROT_MB_ACC_REGISTER_EV_OK, acc->cl_acc);
 
     evbuffer_drain(input, ED25519_SIGNATURE_LEN);
     pmain->current_recv_done = 1;
@@ -84,7 +84,6 @@ struct prot_mb_acc * prot_mb_acc_granted_new(struct prot_mb_acc *acc_reg_req) {
 
     // Copy data from registration request
     acc->db = acc_reg_req->db;
-    acc->hooks = acc_reg_req->hooks ? acc_reg_req->hooks : NULL;
     acc->cl_acc = acc_reg_req->cl_acc ? acc_reg_req->cl_acc : NULL;
     acc->mb_acc = acc_reg_req->mb_acc ? acc_reg_req->mb_acc : NULL;
 
@@ -108,8 +107,6 @@ struct prot_mb_acc * prot_mb_acc_granted_new(struct prot_mb_acc *acc_reg_req) {
 void prot_mb_acc_granted_free(struct prot_mb_acc *msg) {
     if (!msg) return;
 
-    if (msg->hooks)
-        hook_list_free(msg->hooks);
     if (msg->cl_acc)
         free(msg->cl_acc);
     if (msg->mb_acc)

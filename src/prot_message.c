@@ -51,7 +51,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Free message handler object
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_message *msg = phand->msg;
     prot_message_free(msg);
 }
@@ -124,7 +124,7 @@ static void ack_sent(int ack_success, struct prot_main *pmain, void *arg) {
 }
 
 // Free message handler object
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_message *msg = phand->msg;
     prot_message_free(msg);
 }

@@ -9,7 +9,7 @@
 #include <debug.h>
 
 // Free ACK handler memory
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_ack_ed25519 *ack = phand->msg;
 
     if (!ack->ack_success && ack->cb)
@@ -39,7 +39,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 }
 
 // Free the ACK handler memory
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_ack_ed25519 *ack = phand->msg;
 
     if (!ack->ack_success && ack->cb)

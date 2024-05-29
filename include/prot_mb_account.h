@@ -7,13 +7,13 @@
 #include <prot_main.h>
 #include <db_mb_account.h>
 
-// Hook events, 
+// Hook events for mailbox account actions,
 // hook data points to prot_mb_acc_data for new account
 enum prot_mb_acc_events {
-    // Displatched when new account is created successfully
-    PROT_MB_ACCOUNT_EV_OK,
-    // Displatched when creation of mailbox account fails
-    PROT_MB_ACCOUNT_EV_FAIL,
+    PROT_MB_ACC_DELETE_EV_OK     = 0x8901,
+    PROT_MB_ACC_DELETE_EV_FAIL   = 0x8902,
+    PROT_MB_ACC_REGISTER_EV_OK   = 0x8501,
+    PROT_MB_ACC_REGISTER_EV_FAIL = 0x8502,
 };
 
 // Data used during account registration on client side
@@ -29,7 +29,6 @@ struct prot_mb_acc_data {
 // Mailbox account registration request
 struct prot_mb_acc {
     sqlite3 *db;
-    struct hook_list *hooks;
 
     // Used when request arrives to mailbox (on mailbox)
     struct db_mb_account *mb_acc;

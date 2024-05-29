@@ -12,15 +12,12 @@
 // Hook events, 
 // hook data points to prot_mb_set_contacts message handler structure
 enum prot_mb_set_contacts_events {
-    // Displatched when contacts are set successfully
-    PROT_MB_SET_CONTACTS_EV_OK,
-    // Displatched when client failed to set contacts
-    PROT_MB_SET_CONTACTS_EV_FAIL,
+    PROT_MB_SET_CONTACTS_EV_OK   = 0x8801,
+    PROT_MB_SET_CONTACTS_EV_FAIL = 0x8802,
 };
 
 struct prot_mb_set_contacts {
     sqlite3 *db;
-    struct hook_list *hooks;
 
     char onion_address[ONION_ADDRESS_LEN];     // Mailbox onion address
     uint8_t onion_pub_key[ONION_PUB_KEY_LEN];  // Onion address public key (ED25519)
