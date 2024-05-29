@@ -126,29 +126,28 @@ int main() {
     //prot_main_push_tran(pmain, &(freq->htran));
 
     dbmsg = db_message_new();
-    dbmsg->type = DB_MESSAGE_NICK;
+    dbmsg->type = DB_MESSAGE_TEXT;
     dbmsg->contact_id = 19;
     db_message_gen_id(dbmsg);
-    //db_message_set_text(dbmsg, "This is test message", 20);
-    memcpy(dbmsg->body_nick, "rokica", 6);
-    dbmsg->body_nick_len = 6;
+    db_message_set_text(dbmsg, "This is test message", 20);
+    //memcpy(dbmsg->body_nick, "rokica", 6);
+    //dbmsg->body_nick_len = 6;
     dbmsg->status = DB_MESSAGE_STATUS_UNDELIVERED;
-    //db_message_save(dbg, dbmsg);
+    db_message_save(dbg, dbmsg);
 
-    pmsg = prot_message_client_new(dbg, PROT_MESSAGE_TO_CLIENT, dbmsg);
-    //prot_main_push_tran(pmain, &(pmsg->htran));
+    pmsg = prot_message_to_client_new(dbg, dbmsg);
+    prot_main_push_tran(pmain, &(pmsg->htran));
 
     cont = db_contact_get_by_pk(dbg, 19, NULL);
     cfet = prot_client_fetch_new(dbg, cont);
     //prot_main_push_tran(pmain, &(cfet->htran));
-
+    /*
     debug("Creating new MB register");
     acc = prot_mb_acc_register_new(dbg, "g7kfkvigtyx45az27obwydfq3zrxfwl77so3n3tqv22cw3qvz6cuv4qd.onion", mb_access_key);
     debug("Adding hooks");
     hook_add(acc->hooks, PROT_MB_ACCOUNT_EV_OK, reg_status_cb, NULL);
     hook_add(acc->hooks, PROT_MB_ACCOUNT_EV_FAIL, reg_status_cb, NULL);
-    debug("Adding hooks");
-    prot_main_push_tran(pmain, &(acc->htran));
+    prot_main_push_tran(pmain, &(acc->htran));*/
 
     debug("init end");
 

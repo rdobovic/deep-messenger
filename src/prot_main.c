@@ -489,7 +489,7 @@ struct prot_recv_handler *prot_handler_autogen_client(enum prot_message_codes co
 
     if (code == PROT_MESSAGE_CONTAINER) {
         struct prot_message *msg;
-        msg = prot_message_client_new(db, PROT_MESSAGE_TO_CLIENT, NULL);
+        msg = prot_message_to_client_new(db, NULL);
 
         return &(msg->hrecv);
     }

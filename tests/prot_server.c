@@ -35,7 +35,8 @@ void connect_cb(struct evconnlistener *listener, evutil_socket_t sock,
     struct prot_txn_req *txn;
 
     pmain = prot_main_new(base, dbg);
-    pmain->mode = PROT_MODE_MAILBOX;
+    //pmain->mode = PROT_MODE_MAILBOX;
+    pmain->mode = PROT_MODE_CLIENT;
     
     prot_main_setcb(pmain, pmain_done_cb, NULL, NULL);
     prot_main_assign(pmain, bev);
