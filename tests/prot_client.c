@@ -96,6 +96,12 @@ int main() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xbb};
 
+    int mb_access_key_ch_len;
+    char mb_access_key_ch[BASE32_ENCODED_LEN(MAILBOX_ACCESS_KEY_LEN)];
+
+    mb_access_key_ch_len = base32_encode(mb_access_key, MAILBOX_ACCESS_KEY_LEN, mb_access_key_ch, 0);
+    debug("USING MB KEY >>>> %.*s", mb_access_key_ch_len, mb_access_key_ch);
+
     base = event_base_new();
 
     memset(&sin, 0, sizeof(sin));

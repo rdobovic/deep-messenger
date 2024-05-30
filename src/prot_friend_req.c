@@ -64,9 +64,19 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     // Fetch data from the database
     db_options_get_text(msg->db, "client_onion_address", onion_address, ONION_ADDRESS_LEN);
     db_options_get_bin(msg->db, "client_onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
-    db_options_get_bin(msg->db, "client_mailbox_id", mb_id, MAILBOX_ID_LEN);
-    db_options_get_bin(msg->db, "client_mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN);
     nick_len = db_options_get_text(msg->db, "client_nickname", nick, CLIENT_NICK_MAX_LEN);
+
+    // If client has mailbox use mailbox fields, otherwise set them to 0
+    if (db_options_is_defined(msg->db, "client_mailbox_id", DB_OPTIONS_BIN)) {
+        db_options_get_bin(msg->db, "client_mailbox_id", mb_id, MAILBOX_ID_LEN);
+    } else {
+        memset(mb_id, 0, sizeof(mb_id));
+    }
+    if (db_options_is_defined(msg->db, "client_mailbox_onion_address", DB_OPTIONS_TEXT)) {
+        db_options_get_text(msg->db, "client_mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN);
+    } else {
+        memset(mb_onion_address, 0, sizeof(mb_onion_address));
+    }
 
     // Stuff all data into buffer
     evbuffer_add(phand->buffer, prot_header(PROT_FRIEND_REQUEST), PROT_HEADER_LEN);

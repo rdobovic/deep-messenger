@@ -11,7 +11,9 @@ Other options may be added as needed in the future.
 | client_onion_public_key      | Bin  |
 | client_onion_private_key     | Bin  |
 | client_mailbox_id            | Bin  |
-| client_mailbox_onion_address | Bin  |
+| client_mailbox_onion_address | Text |
+| client_mailbox_sig_pub_key   | Bin  |
+| client_mailbox_sig_priv_key  | Bin  |
 | mailbox_onion_address        | Text |
 | mailbox_onion_public_key     | Bin  |
 | mailbox_onion_private_key    | Bin  |
