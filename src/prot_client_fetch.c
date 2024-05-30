@@ -21,7 +21,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Called to free fetch request memory
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_client_fetch *msg = phand->msg;
     debug("PCF Cleanup called");
     prot_client_fetch_free(msg);
@@ -42,7 +42,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 }
 
 // Called to free fetch request memory
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_client_fetch *msg = phand->msg;
     prot_client_fetch_free(msg);
 }

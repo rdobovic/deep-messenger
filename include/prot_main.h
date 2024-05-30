@@ -9,6 +9,7 @@
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 #include <constants.h>
+#include <hooks.h>
 
 #define PROT_QUEUE_LEN 32
 #define PROT_ERROR_MAX_LEN 127
@@ -51,13 +52,18 @@ enum prot_status_codes {
     PROT_ERR_TRANSACTION,
 };
 
+enum prot_main_events {
+    PROT_MAIN_EV_DONE  = 0x0001,
+    PROT_MAIN_EV_CLOSE = 0x0002,
+};
+
 // Struct predefinition
 struct prot_main;
 struct prot_recv_handler;
 struct prot_tran_handler;
 
 // Callback used to free handle memory after it's done processing input
-typedef void (*prot_recv_cleanup_cb)(struct prot_recv_handler *phand);
+typedef void (*prot_recv_cleanup_cb)(struct prot_main *pmain, struct prot_recv_handler *phand);
 // Callback called to handle incomming data, must return 1 once it received and processed
 // all the data, and 0 if not all data arrived yet
 typedef void (*prot_recv_handle_cb)(struct prot_main *pmain, struct prot_recv_handler *phand);
@@ -65,6 +71,9 @@ typedef void (*prot_recv_handle_cb)(struct prot_main *pmain, struct prot_recv_ha
 struct prot_recv_handler {
     enum prot_message_codes msg_code;
     void *msg;
+    // Cleanup functions can read this value to determine if message has been
+    // processed successfully (1 = success, 0 = failure)
+    int success;
     // If set to true prot_main will check first field after protocol
     // header for transaction ID, if ID is invalid it will close the connection
     int require_transaction;
@@ -74,7 +83,7 @@ struct prot_recv_handler {
 };
 
 // Callback used to free handle memory after it's done processing input
-typedef void (*prot_tran_cleanup_cb)(struct prot_tran_handler *phand);
+typedef void (*prot_tran_cleanup_cb)(struct prot_main *pmain, struct prot_tran_handler *phand);
 // Called after transmission is done
 typedef void (*prot_tran_done_cb)(struct prot_main *pmain, struct prot_tran_handler *phand);
 // Called before transmission
@@ -83,6 +92,9 @@ typedef void (*prot_tran_setup_cb)(struct prot_main *pmain, struct prot_tran_han
 struct prot_tran_handler {
     enum prot_message_codes msg_code;
     void *msg;
+    // Cleanup functions can read this value to determine if message has been
+    // processed successfully (1 = success, 0 = failure)
+    int success;
     // Buffer filled with protocol message
     struct evbuffer *buffer;
     // Callback to call once message is transmitted
@@ -91,19 +103,12 @@ struct prot_tran_handler {
     prot_tran_cleanup_cb cleanup_cb;
 };
 
-// Called when connecting and all messages are processed successfully
-typedef void (*prot_main_done_cb)(struct prot_main *pmain, void *attr);
-
-// Called when connection fails, or is closed
-typedef void (*prot_main_close_cb)(struct prot_main *pmain, enum prot_status_codes status, void *attr);
-
 // Main connection handler, attached to bufferevent connection
 // to handle communication
 struct prot_main {
-    void *cbarg;                 // Pointer given to callbacks
-    prot_main_done_cb done_cb;   // Called when all messages are processed and the transmition queue is empty
-    prot_main_close_cb close_cb; // Called when connection is closed
+    struct hook_list *hooks;
 
+    int run_free;   // Protocol main should be freed after all hooks are executed
     enum prot_modes mode;
     enum prot_status_codes status;
 
@@ -135,6 +140,11 @@ struct prot_main *prot_main_new(struct event_base *base, sqlite3 *db);
 
 // Call cleanup for all in the queue and free main protocol object
 void prot_main_free(struct prot_main *pmain);
+
+// Used to free main protocol handler from within hook callback
+// associated with PROT_MAIN_EV_DONE event, object is freed after
+// callback is executed
+void prot_main_defer_free(struct prot_main *pmain);
 
 // Called from inside of callback function, notifies given pmain
 // object that current receiver is done receiving
@@ -168,26 +178,14 @@ void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phan
 // expecting message to arrive (response), returns zero on success
 void prot_main_push_recv(struct prot_main *pmain, struct prot_recv_handler *phand);
 
-// Set callback functions
-void prot_main_setcb(
-    struct prot_main *pmain,
-    prot_main_done_cb done_cb,
-    prot_main_close_cb close_cb,
-    void *cbarg
-);
-
 // Used to enable/disable transmission on main protocol handler
 void prot_main_tran_enable(struct prot_main *pmain, int yes);
 
-// Allocate new object for given message type and set given pointers
-// to handlers for that message, if pointers are NULL they are not set
-// function returns pointer to message object
-void *prot_handler_autogen(
-    enum prot_message_codes code,
-    struct prot_recv_handler **phand_recv,
-    struct prot_tran_handler **phand_tran,
-    sqlite3 *db
-);
+// Allocate new receive handler for given message type, returns prot_recv_handler (on client)
+struct prot_recv_handler *prot_handler_autogen_client(enum prot_message_codes code, sqlite3 *db);
+
+// Allocate new receive handler for given message type, returns prot_recv_handler (on mailbox)
+struct prot_recv_handler *prot_handler_autogen_mailbox(enum prot_message_codes code, sqlite3 *db);
 
 // Convert given error code to human readable error
 const char * prot_main_error_string(enum prot_status_codes err_code);

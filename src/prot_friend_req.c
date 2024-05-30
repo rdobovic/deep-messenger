@@ -40,7 +40,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 }
 
 // Free friend request object
-static void tran_cleanup(struct prot_tran_handler *phand) {
+static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_friend_req *msg = phand->msg;
     prot_friend_req_free(msg);
 }
@@ -62,11 +62,21 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     rsa_2048bit_keygen(msg->friend->local_enc_key_pub, msg->friend->local_enc_key_priv);
 
     // Fetch data from the database
-    db_options_get_text(msg->db, "onion_address", onion_address, ONION_ADDRESS_LEN);
-    db_options_get_bin(msg->db, "onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
-    db_options_get_bin(msg->db, "mailbox_id", mb_id, MAILBOX_ID_LEN);
-    db_options_get_bin(msg->db, "mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN);
-    nick_len = db_options_get_text(msg->db, "nickname", nick, CLIENT_NICK_MAX_LEN);
+    db_options_get_text(msg->db, "client_onion_address", onion_address, ONION_ADDRESS_LEN);
+    db_options_get_bin(msg->db, "client_onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
+    nick_len = db_options_get_text(msg->db, "client_nickname", nick, CLIENT_NICK_MAX_LEN);
+
+    // If client has mailbox use mailbox fields, otherwise set them to 0
+    if (db_options_is_defined(msg->db, "client_mailbox_id", DB_OPTIONS_BIN)) {
+        db_options_get_bin(msg->db, "client_mailbox_id", mb_id, MAILBOX_ID_LEN);
+    } else {
+        memset(mb_id, 0, sizeof(mb_id));
+    }
+    if (db_options_is_defined(msg->db, "client_mailbox_onion_address", DB_OPTIONS_TEXT)) {
+        db_options_get_text(msg->db, "client_mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN);
+    } else {
+        memset(mb_onion_address, 0, sizeof(mb_onion_address));
+    }
 
     // Stuff all data into buffer
     evbuffer_add(phand->buffer, prot_header(PROT_FRIEND_REQUEST), PROT_HEADER_LEN);
@@ -87,7 +97,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
 }
 
 // Free friend request object
-static void recv_cleanup(struct prot_recv_handler *phand) {
+static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phand) {
     struct prot_friend_req *msg = phand->msg;
     prot_friend_req_free(msg);
 }
@@ -180,7 +190,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     evbuffer_drain(input, ED25519_SIGNATURE_LEN);
 
     // Get local user's onion priv key from database
-    db_options_get_bin(msg->db, "onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
+    db_options_get_bin(msg->db, "client_onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
 
     // Time to send ACK, cleanup is disabled since ACK will do it
     phand->cleanup_cb = NULL;

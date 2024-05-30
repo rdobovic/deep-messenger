@@ -7,7 +7,7 @@
 #include <event2/util.h>
 
 #define LOCALHOST        0x7F000001
-#define ONION_ADDRESS    "i4mcwgorejxtforxrd7dsf73hsiiphhlgxxz3aeuef3hixdcv4vg3bid.onion"
+#define ONION_ADDRESS    "g7kfkvigtyx45az27obwydfq3zrxfwl77so3n3tqv22cw3qvz6cuv4qd.onion"
 #define HTTP_SERVER_PORT 80
 
 void log_this(int sev, const char *msg)
@@ -71,6 +71,7 @@ int main(void)
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = htonl(LOCALHOST);
     sin.sin_port = htons(9050);
+    //sin.sin_port = htons(5000);
 
     buffev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
     //buffev = bufferevent_socket_new(base, -1, 0);

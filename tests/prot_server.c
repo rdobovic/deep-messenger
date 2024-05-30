@@ -15,19 +15,16 @@
 
 #define PUB_KEY "zdqu4sgyyylrjfkvznjyla542xzfpwhy2lla2ve577d5ohsbfnza"
 
-void pmain_done_cb(struct prot_main *pmain, void *attr)
-{
+void pmain_done_cb(int ev, void *data, void *cbarg) {
+    struct prot_main *pmain = data;
+
     uint8_t *i = pmain->transaction_id;
     debug("Finished with transaction id: %x%x%x", i[0], i[1], i[2]);
 }
 
-void ack_cb(int succ, void *arg) {
-    debug("RECEIVED ACK: %s", succ ? "OK" : "INVALID");
-}
-
-void connect_cb(struct evconnlistener *listener, evutil_socket_t sock,
-                struct sockaddr *addr, int len, void *ptr)
-{
+void connect_cb(struct evconnlistener *listener, 
+    evutil_socket_t sock, struct sockaddr *addr, int len, void *ptr
+) {
     struct evbuffer *buff;
     struct event_base *base = evconnlistener_get_base(listener);
     struct bufferevent *bev = bufferevent_socket_new(base, sock, BEV_OPT_CLOSE_ON_FREE);
@@ -35,12 +32,14 @@ void connect_cb(struct evconnlistener *listener, evutil_socket_t sock,
     struct prot_txn_req *txn;
 
     pmain = prot_main_new(base, dbg);
-    prot_main_setcb(pmain, pmain_done_cb, NULL, NULL);
+    pmain->mode = PROT_MODE_MAILBOX;
+    //pmain->mode = PROT_MODE_CLIENT;
+
+    hook_add(pmain->hooks, PROT_MAIN_EV_DONE, pmain_done_cb, NULL);
     prot_main_assign(pmain, bev);
 }
 
-int main()
-{
+int main() {
     struct event_base *base;
     struct evconnlistener *listener;
     struct sockaddr_in sin;
@@ -49,6 +48,7 @@ int main()
 
     debug_set_fp(stdout);
     db_init_global("deep_messenger2.db");
+    db_init_schema(dbg);
 
     base = event_base_new();
 

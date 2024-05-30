@@ -8,12 +8,15 @@
 #include <event2/event.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
+#include <hooks.h>
 
 #include <debug.h>
 #include <prot_friend_req.h>
 #include <prot_transaction.h>
 #include <prot_message.h>
 #include <prot_client_fetch.h>
+#include <prot_mb_account.h>
+#include <prot_mb_set_contacts.h>
 
 // Internal bufferevent callbacks
 static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx);
@@ -25,21 +28,26 @@ static void prot_main_socks5_cb(struct bufferevent *bev, enum socks5_errors err,
 
 // Call close callback and free protocol main
 static void prot_main_fail(struct prot_main *pmain, enum prot_status_codes status) {
-    if (pmain->close_cb) {
-        pmain->close_cb(pmain, status, pmain->cbarg);
-    }
+    hook_list_call(pmain->hooks, PROT_MAIN_EV_CLOSE, pmain);
     debug("Main protocol handler failed with error: %s", prot_main_error_string(status));
     prot_main_free(pmain);
 }
 
-static void prot_main_done_check(struct prot_main *pmain) {
+// Returns 0 normally and 1 if protocol handler has been freed
+static int prot_main_done_check(struct prot_main *pmain) {
     debug("Queue state recv(%d) tran(%d)", queue_get_length(pmain->recv_q), queue_get_length(pmain->tran_q));
     if (queue_is_empty(pmain->recv_q) && queue_is_empty(pmain->tran_q)) {
-        if (pmain->done_cb) {
-            pmain->done_cb(pmain, pmain->cbarg);
-        }
+        hook_list_call(pmain->hooks, PROT_MAIN_EV_DONE, pmain);
         debug("Main protocol handler done processing all messages");
+        
+        if (pmain->run_free) {
+            debug("Time to free main protocol handler");
+            prot_main_free(pmain);
+            return 1;
+        }
     }
+
+    return 0;
 }
 
 // Allocate new main protocol object
@@ -54,6 +62,7 @@ struct prot_main *prot_main_new(struct event_base *base, sqlite3 *db) {
     // Set event base and databse
     pmain->db = db;
     pmain->event_base = base;
+    pmain->hooks = hook_list_new();
 
     // Allocate queues
     pmain->tran_q = queue_new(sizeof(struct prot_tran_handler));
@@ -71,8 +80,9 @@ void prot_main_free(struct prot_main *pmain) {
     while (!queue_is_empty(pmain->recv_q)) {
         struct prot_recv_handler *phand = queue_peek(pmain->recv_q, 0);
 
+        phand->success = 0;
         if (phand->cleanup_cb)
-            phand->cleanup_cb(phand);
+            phand->cleanup_cb(pmain, phand);
         queue_dequeue(pmain->recv_q, NULL);
     }
     queue_free(pmain->recv_q);
@@ -81,15 +91,24 @@ void prot_main_free(struct prot_main *pmain) {
     while (!queue_is_empty(pmain->tran_q)) {
         struct prot_tran_handler *phand = queue_peek(pmain->tran_q, 0);
 
+        phand->success = 0;
         if (phand->cleanup_cb)
-            phand->cleanup_cb(phand);
+            phand->cleanup_cb(pmain, phand);
         queue_dequeue(pmain->tran_q, NULL);
     }
     queue_free(pmain->tran_q);
 
     if (pmain->bev)
         bufferevent_free(pmain->bev);
+    hook_list_free(pmain->hooks);
     free(pmain);
+}
+
+// Used to free main protocol handler from within hook callback
+// associated with PROT_MAIN_EV_DONE event, object is freed after
+// callback is executed
+void prot_main_defer_free(struct prot_main *pmain) {
+    pmain->run_free = 1;
 }
 
 // Connect to given TOR client socks server and try to contact
@@ -146,9 +165,9 @@ void prot_main_recv_done(struct prot_main *pmain) {
 // Push new message into transmission queue, returns zero on success
 void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phand) {
     // Insert handler into queue
-    debug("pushing into queue %p", phand);
+    debug("pushing into T queue %p", phand);
     queue_enqueue(pmain->tran_q, phand);
-    debug("pushed into queue");
+    debug("pushed into T queue");
 
     // If bufferevent is ready and no transmission is in progress
     if (pmain->bev_ready && !pmain->tran_in_progress) {
@@ -156,7 +175,7 @@ void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phan
         prot_main_bev_write_cb(pmain->bev, pmain);
     }
 
-    debug("pushed success");
+    debug("pushed T success");
 }
 
 // Push new message receiver into receiver queue, this is done when you are
@@ -164,19 +183,6 @@ void prot_main_push_tran(struct prot_main *pmain, struct prot_tran_handler *phan
 void prot_main_push_recv(struct prot_main *pmain, struct prot_recv_handler *phand) {
     // Insert handler into queue
     queue_enqueue(pmain->recv_q, phand);
-}
-
-// Set callback functions
-void prot_main_setcb(
-    struct prot_main *pmain,
-    prot_main_done_cb done_cb,
-    prot_main_close_cb close_cb,
-    void *cbarg
-) {
-    debug("Settings callbacks for pmain");
-    pmain->cbarg = cbarg;
-    pmain->done_cb = done_cb;
-    pmain->close_cb = close_cb;
 }
 
 // Assign protocol connection handler to given bufferevent
@@ -240,11 +246,13 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
 
             // If queue is empty try to get handler for given message type
             if (queue_is_empty(pmain->recv_q)) {
-                void *msg_object;
 
-                msg_object = prot_handler_autogen(message_code, &phand, NULL, pmain->db);
+                if (pmain->mode == PROT_MODE_CLIENT)
+                    phand = prot_handler_autogen_client(message_code, pmain->db);
+                else
+                    phand = prot_handler_autogen_mailbox(message_code, pmain->db);
 
-                if (msg_object == NULL) {
+                if (phand == NULL) {
                     prot_main_fail(pmain, PROT_ERR_INVALID_MSG);
                     return;
                 }
@@ -306,8 +314,10 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
         // If handler is done run the handler cleanup and
         // remove handler from the queue
         if (pmain->current_recv_done) {
+            phand->success = 1;
+
             if (phand->cleanup_cb) {
-                phand->cleanup_cb(phand);
+                phand->cleanup_cb(pmain, phand);
 
                 if (pmain->status != PROT_STATUS_OK) {
                     prot_main_fail(pmain, pmain->status);
@@ -319,7 +329,9 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
             pmain->current_recv_done = 0;
             pmain->message_check_done = 0;
 
-            prot_main_done_check(pmain);
+
+            if (prot_main_done_check(pmain))
+                return;
         } else {
             return;
         }
@@ -348,7 +360,7 @@ static void prot_main_bev_write_cb(struct bufferevent *bev, void *ctx) {
 
     phand = queue_peek(pmain->tran_q, 0);
 
-    debug("Got handler to write");
+    debug("Got handler to write %p", phand);
 
     // If there is transmission in progress it is done now
     if (pmain->tran_in_progress) {
@@ -362,8 +374,10 @@ static void prot_main_bev_write_cb(struct bufferevent *bev, void *ctx) {
                 return;
             }
         }
+
+        phand->success = 1;
         if (phand->cleanup_cb) {
-            phand->cleanup_cb(phand);
+            phand->cleanup_cb(pmain, phand);
 
             if (pmain->status != PROT_STATUS_OK) {
                 prot_main_fail(pmain, pmain->status);
@@ -374,7 +388,8 @@ static void prot_main_bev_write_cb(struct bufferevent *bev, void *ctx) {
         queue_dequeue(pmain->tran_q, NULL);
         pmain->tran_in_progress = 0;
 
-        prot_main_done_check(pmain);
+        if (prot_main_done_check(pmain))
+            return;
         if (queue_is_empty(pmain->tran_q))
             return;
 
@@ -460,59 +475,69 @@ void prot_main_tran_enable(struct prot_main *pmain, int yes) {
         prot_main_bev_write_cb(pmain->bev, pmain);
 }
 
-// Allocate new object for given message type and set given pointers
-// to handlers for that message, if pointers are NULL they are not set
-// function returns pointer to message object
-void *prot_handler_autogen(
-    enum prot_message_codes code,
-    struct prot_recv_handler **phand_recv,
-    struct prot_tran_handler **phand_tran,
-    sqlite3 *db
-) {
+// Allocate new receive handler for given message type, returns prot_recv_handler (on client)
+struct prot_recv_handler *prot_handler_autogen_client(enum prot_message_codes code, sqlite3 *db) {
+
     if (code == PROT_TRANSACTION_REQUEST) {
         struct prot_txn_req *msg;
         msg = prot_txn_req_new();
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
-
-        if (phand_tran)
-            *phand_tran = &(msg->htran);
-
-        return msg;
+        return &(msg->hrecv);
     }
 
     if (code == PROT_FRIEND_REQUEST) {
         struct prot_friend_req *msg;
         msg = prot_friend_req_new(db, NULL);
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
-
-        if (phand_tran)
-            *phand_tran = &(msg->htran);
-
-        return msg;
+        return &(msg->hrecv);
     }
 
     if (code == PROT_MESSAGE_CONTAINER) {
         struct prot_message *msg;
-        msg = prot_message_client_new(db, PROT_MESSAGE_TO_CLIENT, NULL);
+        msg = prot_message_to_client_new(db, NULL);
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
-
-        return msg;
+        return &(msg->hrecv);
     }
 
     if (code == PROT_CLIENT_FETCH) {
         struct prot_client_fetch *msg;
         msg = prot_client_fetch_new(db, NULL);
 
-        if (phand_recv)
-            *phand_recv = &(msg->hrecv);
+        return &(msg->hrecv);
+    }
 
-        return msg;
+    return NULL;
+}
+
+// Allocate new receive handler for given message type, returns prot_recv_handler (on mailbox)
+struct prot_recv_handler *prot_handler_autogen_mailbox(enum prot_message_codes code, sqlite3 *db) {
+
+    if (code == PROT_TRANSACTION_REQUEST) {
+        struct prot_txn_req *msg;
+        msg = prot_txn_req_new();
+
+        return &(msg->hrecv);
+    }
+
+    if (code == PROT_MAILBOX_REGISTER) {
+        struct prot_mb_acc *msg;
+        msg = prot_mb_acc_register_new(db, NULL, NULL);
+
+        return &(msg->hrecv);
+    }
+
+    if (code == PROT_MAILBOX_DEL_ACCOUNT) {
+        struct prot_mb_acc *msg;
+        msg = prot_mb_acc_delete_new(db, NULL, NULL, NULL);
+
+        return &(msg->hrecv);
+    }
+
+    if (code == PROT_MAILBOX_SET_CONTACTS) {
+        struct prot_mb_set_contacts *msg;
+        msg = prot_mb_set_contacts_new(db, NULL, NULL, NULL, NULL, 0);
+
+        return &(msg->hrecv);
     }
 
     return NULL;

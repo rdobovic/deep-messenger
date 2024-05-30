@@ -10,7 +10,7 @@
 // Generate ED25519 keypair and place keys on given locations
 void ed25519_keygen(uint8_t *public_key, uint8_t *private_key) {
     size_t len;
-    EVP_PKEY *pkey;
+    EVP_PKEY *pkey = NULL;
     EVP_PKEY_CTX *keyctx;
 
     if (
