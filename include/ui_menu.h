@@ -28,7 +28,6 @@ struct ui_menu {
     int n_items;       // Number of items used
     int items_alloc;   // Number of items allocated
     struct ui_menu_item *items;
-    wchar_t title[UI_MENU_LABEL_SIZE];
 };
 
 // Allocate new menu component
@@ -44,7 +43,7 @@ void ui_menu_attach(struct ui_menu *menu, struct ui_window *win);
 void ui_menu_add(
     struct ui_menu *menu,
     int id,
-    wchar_t *label,
+    char *label,
     ui_menu_select_cb cb,
     void *attr
 );
@@ -52,10 +51,7 @@ void ui_menu_add(
 // Remove label with given id
 void ui_menu_remove(struct ui_menu *menu, int id);
 
-// Set given str to be menu title
-void ui_menu_set_title(struct ui_menu *menu, wchar_t *title);
-
 // Update label on item with given id
-void ui_menu_item_update(struct ui_menu *menu, int id, wchar_t *label);
+void ui_menu_item_update(struct ui_menu *menu, int id, char *label);
 
 #endif

@@ -122,7 +122,7 @@ int ui_window_use_title(struct ui_window *win, int use_it);
 void ui_window_clear_title(struct ui_window *win);
 
 // Write text in window title area
-void ui_window_write_title(struct ui_window *win, wchar_t *str, enum ui_window_align align);
+void ui_window_write_title(struct ui_window *win, char *str, enum ui_window_align align);
 
 // Turn on border support and draw border later
 int ui_window_use_border(struct ui_window *win, int use_it);

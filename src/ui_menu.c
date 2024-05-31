@@ -4,6 +4,7 @@
 #include <ui_window.h>
 #include <sys_memory.h>
 #include <debug.h>
+#include <array.h>
 
 struct ui_menu * ui_menu_new(void) {
     struct ui_menu *menu;
@@ -22,7 +23,7 @@ void ui_menu_free(struct ui_menu *menu) {
 void ui_menu_add(
     struct ui_menu *menu,
     int id,
-    wchar_t *label,
+    char *label,
     ui_menu_select_cb cb,
     void *attr
 ) {
@@ -52,11 +53,11 @@ void ui_menu_add(
     item->attr = attr;
     
     // Copy label
-    wcsncpy(item->label, label, UI_MENU_LABEL_SIZE);
+    mbstowcs(item->label, label, UI_MENU_LABEL_SIZE);
     item->label[UI_MENU_LABEL_SIZE - 1] = '\0';
 }
 
-void ui_menu_item_update(struct ui_menu *menu, int id, wchar_t *label) {
+void ui_menu_item_update(struct ui_menu *menu, int id, char *label) {
     int i;
 
     for (i = 0; menu->items[i].id != id && i < menu->n_items; i++)
@@ -64,7 +65,7 @@ void ui_menu_item_update(struct ui_menu *menu, int id, wchar_t *label) {
     if (i == menu->n_items)
         return;
 
-    wcsncpy(menu->items[i].label, label, UI_MENU_LABEL_SIZE);
+    mbstowcs(menu->items[i].label, label, UI_MENU_LABEL_SIZE);
     menu->items[i].label[UI_MENU_LABEL_SIZE - 1] = '\0';
 }
 
@@ -82,11 +83,6 @@ void ui_menu_remove(struct ui_menu *menu, int id) {
     --menu->n_items;
     menu->cursor = 0;
     menu->display_start = 0;
-}
-
-void ui_menu_set_title(struct ui_menu *menu, wchar_t *title) {
-    wcsncpy(menu->title, title, UI_MENU_LABEL_SIZE);
-    menu->title[UI_MENU_LABEL_SIZE - 1] = '\0';
 }
 
 void ui_menu_input_cb(

@@ -155,10 +155,10 @@ void ui_window_clear_title(struct ui_window *win) {
     memset(win->title, 0, sizeof(wchar_t) * win->cols);
 }
 
-void ui_window_write_title(struct ui_window *win, wchar_t *str, enum ui_window_align align) {
+void ui_window_write_title(struct ui_window *win, char *str, enum ui_window_align align) {
     int maxlen, start, len;
 
-    len = wcslen(str);
+    len = mbstowcs(NULL, str, 0);
     maxlen = win->cols;
     len = len > maxlen ? maxlen : len;
     
@@ -171,7 +171,7 @@ void ui_window_write_title(struct ui_window *win, wchar_t *str, enum ui_window_a
             start = (maxlen - len) / 2; break;
     }
 
-    wcsncpy(win->title + start, str, len);
+    mbstowcs(win->title + start, str, len);
 }
 
 void ui_window_attach(
@@ -181,6 +181,12 @@ void ui_window_attach(
 ) {
     win->component = component;
     win->handle_input = input_cb;
+
+    // If window is already defined remove old window content
+    if (ui_window_is_defined(win)) {
+        wmove(win->win, 0, 0);
+        wclrtobot(win->win);
+    }
 
     ui_window_call_action(win, UI_WINDOW_ATTACH);
 }

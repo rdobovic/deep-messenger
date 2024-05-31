@@ -33,7 +33,8 @@ void ui_prompt_clear(struct ui_prompt *prt) {
     prt->buffer_len = 0;
     prt->display_start = 0;
 
-    ui_window_draw(prt->win, 1, 1);
+    if (ui_window_is_defined(prt->win))
+        ui_window_draw(prt->win, 1, 1);
 }
 
 // Handle user input
@@ -161,9 +162,9 @@ void ui_prompt_before_draw_cb(
     struct ui_prompt *prt = component;
     ui_window_clear_title(win);
     if (prt->buffer_len == UI_PROMPT_BUFFER_SIZE)
-        ui_window_write_title(win, L"Type your message (you reached size limit):", UI_WINDOW_LEFT);
+        ui_window_write_title(win, "Type your message (you reached size limit):", UI_WINDOW_LEFT);
     else
-        ui_window_write_title(win, L"Type your message:", UI_WINDOW_LEFT);
+        ui_window_write_title(win, "Type your message:", UI_WINDOW_LEFT);
 }
 
 // Draw prompt to the screen

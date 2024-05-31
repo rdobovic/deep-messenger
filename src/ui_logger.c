@@ -59,7 +59,20 @@ void ui_logger_free(struct ui_logger *logr) {
     free(logr);
 }
 
-void ui_logger_log(struct ui_logger *logr, const wchar_t *text) {
+void ui_logger_log(struct ui_logger *logr, const char *text) {
+    size_t buff_len;
+    wchar_t *buffer;
+
+    buff_len = mbstowcs(NULL, text, 0) + 1;
+    buffer = array(wchar_t);
+    array_expand(buffer, buff_len);
+
+    mbstowcs(buffer, text, buff_len);
+    ui_logger_log_wc(logr, buffer);
+    array_free(buffer);
+}
+
+void ui_logger_log_wc(struct ui_logger *logr, const wchar_t *text) {
     int len, i, line_start;
 
     len = wcslen(text);
@@ -94,17 +107,23 @@ void ui_logger_log(struct ui_logger *logr, const wchar_t *text) {
     ui_logger_draw_if_selected(logr);
 }
 
-void ui_logger_printf(struct ui_logger *logr, const wchar_t *format, ...) {
+void ui_logger_printf(struct ui_logger *logr, const char *format, ...) {
     va_list vl;
-    wchar_t buffer[UI_LOGGER_PRINTF_BUFFER_SIZE];
+    char *buffer;
+    size_t buff_size;
 
     va_start(vl, format);
-    if (vswprintf(buffer, UI_LOGGER_PRINTF_BUFFER_SIZE, format, vl) == -1) {
-        ui_logger_log(logr, L"??? log message was too long to fit in printf buffer ???");
-    } else {
-        ui_logger_log(logr, buffer);
-    }
+    buff_size = vsnprintf(NULL, 0, format, vl) + 1;
     va_end(vl);
+    
+    buffer = array(char);
+    array_expand(buffer, buff_size);
+
+    va_start(vl, format);
+    vsnprintf(buffer, buff_size, format, vl);
+    ui_logger_log(logr, buffer);
+    va_end(vl);
+    array_free(buffer);
 }
 
 void ui_logger_input_cb(

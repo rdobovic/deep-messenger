@@ -47,11 +47,14 @@ struct ui_logger * ui_logger_new(void);
 void ui_logger_free(struct ui_logger *logr);
 
 // Log new line
-void ui_logger_log(struct ui_logger *logr, const wchar_t *text);
+void ui_logger_log(struct ui_logger *logr, const char *text);
+
+// Log new line, but use wide char string (for UI internal use)
+void ui_logger_log_wc(struct ui_logger *logr, const wchar_t *text);
 
 // Printf like function to use with logger, uses vswprintf and char buffer
 // of size UI_LOGGER_PRINTF_BUFFER_SIZE under the hood
-void ui_logger_printf(struct ui_logger *logr, const wchar_t *format, ...);
+void ui_logger_printf(struct ui_logger *logr, const char *format, ...);
 
 // Attach the logger to window
 void ui_logger_attach(struct ui_logger *logr, struct ui_window *win);
