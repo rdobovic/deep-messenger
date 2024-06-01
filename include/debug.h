@@ -38,7 +38,6 @@ extern FILE *_debug_file;
     #define debug_set_fp(fp) \
         if (1) { \
             _debug_file = (fp); \
-            debug(">> New debug FP set"); \
         }
 
 #else

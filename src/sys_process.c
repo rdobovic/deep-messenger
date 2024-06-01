@@ -3,11 +3,12 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <debug.h>
 
 #include <sys_memory.h>
 #include <sys_process.h>
 
-struct sys_process * sys_process_start(const char *filepath, char **args) {
+struct sys_process * sys_process_start(const char *filepath, char **args, int open_files) {
     struct sys_process *proc;
 
     pid_t pid;
@@ -34,21 +35,26 @@ struct sys_process * sys_process_start(const char *filepath, char **args) {
     }
 
     proc = safe_malloc(sizeof(struct sys_process), SYS_PROCESS_MEMORY_ERROR);
+    memset(proc, 0, sizeof(struct sys_process));
 
     proc->pid = pid;
 
     proc->stdin_fd = p_stdin[SYS_PROCESS_WRITE];
     proc->stdout_fd = p_stdout[SYS_PROCESS_READ];
 
-    proc->sin = fdopen(proc->stdin_fd, "w");
-    proc->sout = fdopen(proc->stdout_fd, "r");
+    if (open_files) {
+        proc->sin = fdopen(proc->stdin_fd, "w");
+        proc->sout = fdopen(proc->stdout_fd, "r");
+    }
 
     return proc;
 }
 
 void sys_process_end(struct sys_process *process) {
-    fclose(process->sin);
-    fclose(process->sout);
+    if (process->sin)
+        fclose(process->sin);
+    if (process->sout)
+        fclose(process->sout);
     
     close(process->stdin_fd);
     close(process->stdout_fd);

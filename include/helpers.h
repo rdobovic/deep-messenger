@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_HELPERS_H_
 #define _INCLUDE_HELPERS_H_
 
+#include <stdint.h>
+
 // Return smaller number
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -32,5 +34,12 @@ int divide(const char *format, int full_length, ...);
 
 // Check if given string ends with given end (string)
 int str_ends_with(const char *str, const char *end);
+
+#define MAX_PORT_STR_LEN 6
+
+// Find free port on the system
+// returns port on success and copies it to port_dest if not NULL
+// on error it returns 0
+uint16_t get_free_port(char *port_dest);
 
 #endif

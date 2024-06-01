@@ -168,8 +168,6 @@ int db_options_get_text(sqlite3 *db, const char *key, char *value, int value_len
     db_value = sqlite3_column_text(stmt, 0);
     db_value_len = sqlite3_column_bytes(stmt, 0);
 
-    debug("%d db_value_len", db_value_len);
-
     strncpy(value, db_value, 
         db_value_len < value_len ? db_value_len : value_len);
     sqlite3_finalize(stmt);

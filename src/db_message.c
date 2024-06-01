@@ -300,14 +300,14 @@ struct db_message ** db_message_get_all(sqlite3 *db, struct db_contact *cont, en
     sqlite3_stmt *stmt;
     struct db_message **msgs;
 
-    const char sql_any[] =
-        "SELECT * FROM client_messages WHERE contact_id = ? AND (status = ? OR 1=1)";
-    const char sql_count_any[] =
-        "SELECT COUNT(*) FROM client_messages WHERE contact_id = ? AND (status = ? OR 1=1)";
     const char sql[] =
         "SELECT * FROM client_messages WHERE contact_id = ? AND status = ?";
     const char sql_count[] =
         "SELECT COUNT(*) FROM client_messages WHERE contact_id = ? AND status = ?";
+    const char sql_any[] =
+        "SELECT * FROM client_messages WHERE contact_id = ? AND (status = ? OR 1 = 1)";
+    const char sql_count_any[] =
+        "SELECT COUNT(*) FROM client_messages WHERE contact_id = ? AND (status = ? OR 1 = 1)";
 
     if (sqlite3_prepare_v2(db, status == DB_MESSAGE_STATUS_ANY ? sql_count_any : sql_count, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to count client messages");

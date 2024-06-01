@@ -48,3 +48,25 @@ int array_length(void *arr_s) {
     struct array_data *arr = arr_s - sizeof(struct array_data);
     return arr->length;
 }
+
+// Copy given null terminated string into array, expand array as needed
+// function copies until it reaches null terminator or maxlen if maxlen is not -1
+void * _array_strcpy(void *arr_s, const char *str, int maxlen) {
+    int len, i;
+    char *dest;
+
+    if (maxlen == -1)
+        maxlen = strlen(str);
+
+    array_expand(arr_s, maxlen + 1);
+    dest = arr_s;
+    
+    for (i = 0; i < maxlen; i++) {
+        if (str[i] == '\0')
+            break;
+
+        dest[i] = str[i];
+    }
+    dest[i] = '\0';
+    return arr_s;
+}

@@ -16,7 +16,7 @@ int main() {
     struct sys_process *proc;
     char line[MAX_LINE];
 
-    proc = sys_process_start(TOR_PATH, command);
+    proc = sys_process_start(TOR_PATH, command, 1);
 
     printf("Started TOR process with PID %d\n", proc->pid);
 

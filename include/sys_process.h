@@ -20,8 +20,8 @@ struct sys_process {
 };
 
 // Start program on given path with given arguments (NULL terminated)
-// and return process data (pipes and pid)
-struct sys_process * sys_process_start(const char *filepath, char **args);
+// and return process data (pipes and pid), if open files is 1 FILE pointers are created for pipes
+struct sys_process * sys_process_start(const char *filepath, char **args, int open_files);
 
 // Kill process and close pipes
 void sys_process_end(struct sys_process *process);

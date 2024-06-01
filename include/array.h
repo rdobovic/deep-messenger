@@ -39,4 +39,12 @@ void array_free(void *arr_s);
 // Get current length of given array (elements allocated)
 int array_length(void *arr_s);
 
+// Macro for function below
+#define array_strcpy(arr, str, maxlen) \
+    ((arr) = _array_strcpy((arr), (str), (maxlen)))
+
+// Copy given null terminated string into array, expand array as needed
+// function copies until it reaches null terminator or maxlen if maxlen is not -1
+void * _array_strcpy(void *arr_s, const char *str, int maxlen);
+
 #endif
