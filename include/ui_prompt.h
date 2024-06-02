@@ -22,6 +22,7 @@ struct ui_prompt {
     int ch_cursor;
     int display_start;
     int buffer_len;
+    char *mb_input_buffer;
     wchar_t input_buffer[UI_PROMPT_BUFFER_SIZE + 1];
 
     ui_prompt_submit_cb submit_cb;
@@ -41,5 +42,8 @@ void ui_prompt_set_submit_cb(struct ui_prompt *prt, ui_prompt_submit_cb cb, void
 
 // Clear the prompt
 void ui_prompt_clear(struct ui_prompt *prt);
+
+// Convert prompt wchar buffer to chars and return it
+char * ui_prompt_get_input(struct ui_prompt *prt);
 
 #endif

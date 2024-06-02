@@ -320,7 +320,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         db_mb_message_set_data(msg->mailbox_msg, message_data, message_len);
 
         mb_ack_send:
-        db_options_get_bin(msg->db, "mailbox_onion_private_key", mb_onion_priv_key, ONION_PRIV_KEY_LEN);
+        db_options_get_bin(msg->db, "onion_private_key", mb_onion_priv_key, ONION_PRIV_KEY_LEN);
         ack = prot_ack_ed25519_new(PROT_ACK_ONION, NULL, mb_onion_priv_key, ack_sent, msg);
         prot_main_push_tran(pmain, &(ack->htran));
 

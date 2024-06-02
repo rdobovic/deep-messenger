@@ -9,6 +9,9 @@
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 #include <hooks.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include <debug.h>
 #include <prot_friend_req.h>
@@ -97,7 +100,7 @@ void prot_main_free(struct prot_main *pmain) {
         queue_dequeue(pmain->tran_q, NULL);
     }
     queue_free(pmain->tran_q);
-
+    
     if (pmain->bev)
         bufferevent_free(pmain->bev);
     hook_list_free(pmain->hooks);
@@ -116,20 +119,53 @@ void prot_main_defer_free(struct prot_main *pmain) {
 void prot_main_connect(
     struct prot_main *pmain,
     const char *onion_address,
-    struct sockaddr *socks_server_addr,
-    size_t server_addr_size
+    const char *onion_port,
+    const char *socks_server_addr,
+    const char *socks_server_port
 ) {
+    int rc;
+    uint16_t onion_port_parsed;
+    struct addrinfo hints, *servinfo, *aip;
+
     pmain->bev = bufferevent_socket_new(pmain->event_base, -1, BEV_OPT_CLOSE_ON_FREE);
+    if (!pmain->bev) {
+        prot_main_fail(pmain, PROT_ERR_SOCKS_CONN_FAIL);
+        return;
+    }
     bufferevent_enable(pmain->bev, EV_READ | EV_WRITE);
 
-    if (bufferevent_socket_connect(pmain->bev, socks_server_addr, server_addr_size) < 0) {
+    debug("Got socket");
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((rc = getaddrinfo(socks_server_addr, socks_server_port, &hints, &servinfo)) != 0) {
+        debug("getaddrinfo: %s", gai_strerror(rc));
         prot_main_fail(pmain, PROT_ERR_SOCKS_CONN_FAIL);
         return;
     }
 
-    socks5_connect_onion(
-        pmain->bev, onion_address,
-        DEEP_MESSENGER_PORT, prot_main_socks5_cb, pmain);
+    debug("Got addrinfo addresses");
+
+    for (aip = servinfo; aip != NULL; aip = aip->ai_next) {
+        if (bufferevent_socket_connect(pmain->bev, aip->ai_addr, aip->ai_addrlen) == 0)
+            break;
+    }
+    freeaddrinfo(servinfo);
+
+    debug("Got socket connected");
+
+    if (aip == NULL || sscanf(onion_port, "%d", &onion_port_parsed) != 1) {
+        prot_main_fail(pmain, PROT_ERR_SOCKS_CONN_FAIL);
+        return;
+    }
+
+    debug("Connecting to onion");
+
+    // Connect to onion service
+    socks5_connect_onion(pmain->bev, onion_address,
+        onion_port_parsed, prot_main_socks5_cb, pmain);
 }
 
 // Socks5 done callback, called to setup

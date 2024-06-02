@@ -29,8 +29,10 @@
 
 #define DESTINATION_PORT "5000"
 
-#define MAILBOX_ONION_ADDRESS "g7kfkvigtyx45az27obwydfq3zrxfwl77so3n3tqv22cw3qvz6cuv4qd.onion"
-#define MAILBOX_ACCESS_KEY    "xmaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf3"
+//#define MAILBOX_ONION_ADDRESS "g7kfkvigtyx45az27obwydfq3zrxfwl77so3n3tqv22cw3qvz6cuv4qd.onion"
+//#define MAILBOX_ACCESS_KEY    "xmaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf3"
+#define MAILBOX_ONION_ADDRESS "kxzo623ydhtavsm4mbp5yqavkofcnjlxvjawtgzrqtszlqfwa6cmmgqd.onion"
+#define MAILBOX_ACCESS_KEY    "xdin5urxzgexn6vqnbcq3mc7f5qdqddvjla7rd3f"
 
 struct event_base *base;
 struct prot_main *pmain;
@@ -89,15 +91,8 @@ void pmain_done_event(int ev, void *data, void *cbarg) {
 void init_operation() {
     int op;
     int rc;
-    struct bufferevent *bev;
-    struct addrinfo hints;
-    struct addrinfo *servinfo, *aip;
 
     struct prot_txn_req *treq;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
 
     debug("Enter operation number: ");
     scanf("%d", &op);
@@ -125,29 +120,8 @@ void init_operation() {
         return;
     }
 
-    if (rc = getaddrinfo("127.0.0.1", DESTINATION_PORT, &hints, &servinfo)) {
-        debug("getaddrinfo: %s", gai_strerror(rc));
-        exit(1);
-    }
-
-    bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
-
-    /*for (aip = servinfo; aip != NULL; aip = aip->ai_next) {
-        if (bufferevent_socket_connect(bev, aip->ai_addr, aip->ai_addrlen) < 0)
-            continue;
-
-        debug("Connected successfully");
-        break;
-    }
-
-    if (aip == NULL) {
-        debug("Failed to connect");
-        exit(1);
-    }*/
-
     pmain = prot_main_new(base, dbg);
-
-    prot_main_connect(pmain, MAILBOX_ONION_ADDRESS, servinfo->ai_addr, servinfo->ai_addrlen);
+    prot_main_connect(pmain, MAILBOX_ONION_ADDRESS, DEEP_MESSENGER_MAILBOX_PORT, "127.0.0.1", "9050");
 
     //prot_main_assign(pmain, bev);
     hook_add(pmain->hooks, PROT_MAIN_EV_DONE, pmain_done_event, NULL);

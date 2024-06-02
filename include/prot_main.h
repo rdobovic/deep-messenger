@@ -155,17 +155,9 @@ void prot_main_recv_done(struct prot_main *pmain);
 void prot_main_connect(
     struct prot_main *pmain,
     const char *onion_address,
-    struct sockaddr *socks_server_addr,
-    size_t server_addr_size
-);
-
-// Same as prot_main_connect but also use addrinfo to get sockaddr
-// structure using specified port and address string
-void prot_main_connect_parse(
-    struct prot_main *pmain,
-    const char *onion_address,
-    uint16_t socks_server_port,
-    const char *socks_server_addr
+    const char *onion_port,
+    const char *socks_server_addr,
+    const char *socks_server_port
 );
 
 // Assign protocol connection handler to given bufferevent

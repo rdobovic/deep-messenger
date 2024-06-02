@@ -6,14 +6,11 @@ Other options may be added as needed in the future.
 
 | Key                          | Type |
 |------------------------------|:----:|
+| onion_address                | Text |
+| onion_public_key             | Bin  |
+| onion_private_key            | Bin  |
 | client_nickname              | Text |
-| client_onion_address         | Text |
-| client_onion_public_key      | Bin  |
-| client_onion_private_key     | Bin  |
 | client_mailbox_id            | Bin  |
 | client_mailbox_onion_address | Text |
 | client_mailbox_sig_pub_key   | Bin  |
 | client_mailbox_sig_priv_key  | Bin  |
-| mailbox_onion_address        | Text |
-| mailbox_onion_public_key     | Bin  |
-| mailbox_onion_private_key    | Bin  |

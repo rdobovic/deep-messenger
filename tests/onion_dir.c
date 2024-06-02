@@ -41,10 +41,10 @@ int main() {
     onion_address_from_pub_key(pub_key, onion_address);
     onion_address[ONION_ADDRESS_LEN] = '\0';
 
-    db_options_set_text(dbg, "client_onion_address", onion_address, strlen(onion_address));
+    db_options_set_text(dbg, "onion_address", onion_address, strlen(onion_address));
 
-    db_options_set_bin(dbg, "client_onion_public_key", pub_key, ONION_PUB_KEY_LEN);
-    db_options_set_bin(dbg, "client_onion_private_key", priv_key, ONION_PRIV_KEY_LEN);
+    db_options_set_bin(dbg, "onion_public_key", pub_key, ONION_PUB_KEY_LEN);
+    db_options_set_bin(dbg, "onion_private_key", priv_key, ONION_PRIV_KEY_LEN);
 
     return 0;
 }

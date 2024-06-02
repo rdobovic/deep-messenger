@@ -8,6 +8,7 @@
 #include <debug.h>
 #include <helpers.h>
 #include <sys_memory.h>
+#include <array.h>
 
 // Create new prompt
 struct ui_prompt * ui_prompt_new(void) {
@@ -15,6 +16,7 @@ struct ui_prompt * ui_prompt_new(void) {
 
     prt = safe_malloc(sizeof(struct ui_prompt), PROMPT_MEMORY_ERROR);
     memset(prt, 0, sizeof(prt));
+    prt->mb_input_buffer = array(char);
     return prt;
 }
 
@@ -24,6 +26,7 @@ void ui_prompt_free(struct ui_prompt *prt) {
     if (prt->win)
         ui_window_detach(prt->win);
 
+    array_free(prt->mb_input_buffer);
     free(prt);
 }
 
@@ -202,4 +205,15 @@ void ui_prompt_attach(struct ui_prompt *prt, struct ui_window *win) {
 void ui_prompt_set_submit_cb(struct ui_prompt *prt, ui_prompt_submit_cb cb, void *att) {
     prt->submit_cb = cb;
     prt->cb_attribute = att;
+}
+
+// Convert prompt wchar buffer to chars and return it
+char * ui_prompt_get_input(struct ui_prompt *prt) {
+    size_t len;
+
+    len = wcstombs(NULL, prt->input_buffer, 0) + 1;
+    array_expand(prt->mb_input_buffer, len);
+    wcstombs(prt->mb_input_buffer, prt->input_buffer, len);
+    
+    return prt->mb_input_buffer;
 }

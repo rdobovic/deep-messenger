@@ -25,7 +25,6 @@ static void socks5_internal_fail(struct socks5_data *data, enum socks5_errors er
 // Internal function, frees bufferevent and socks5 data structure and calls
 // done callback with given error
 void socks5_internal_fail(struct socks5_data *data, enum socks5_errors err) {
-    bufferevent_free(data->buffev);
     data->done_cb(NULL, err, data->attr);
     free(data);
 }

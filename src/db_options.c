@@ -170,6 +170,7 @@ int db_options_get_text(sqlite3 *db, const char *key, char *value, int value_len
 
     strncpy(value, db_value, 
         db_value_len < value_len ? db_value_len : value_len);
+    value[db_value_len < value_len ? db_value_len : value_len - 1] = '\0';
     sqlite3_finalize(stmt);
     return db_value_len;
 }

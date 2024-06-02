@@ -288,15 +288,15 @@ void app_start(struct app_data *app, int argc, char **argv) {
     }
 
     // Get or generate onion keys
-    if (!db_options_is_defined(app->db, "client_onion_public_key", DB_OPTIONS_BIN) || 
-        !db_options_is_defined(app->db, "client_onion_private_key", DB_OPTIONS_BIN)
+    if (!db_options_is_defined(app->db, "onion_public_key", DB_OPTIONS_BIN) || 
+        !db_options_is_defined(app->db, "onion_private_key", DB_OPTIONS_BIN)
     ) {
         ed25519_keygen(onion_pub_key, onion_priv_key);
-        db_options_set_bin(app->db, "client_onion_public_key", onion_pub_key, ONION_PUB_KEY_LEN);
-        db_options_set_bin(app->db, "client_onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
+        db_options_set_bin(app->db, "onion_public_key", onion_pub_key, ONION_PUB_KEY_LEN);
+        db_options_set_bin(app->db, "onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
     } else {
-        db_options_get_bin(app->db, "client_onion_public_key", onion_pub_key, ONION_PUB_KEY_LEN);
-        db_options_get_bin(app->db, "client_onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
+        db_options_get_bin(app->db, "onion_public_key", onion_pub_key, ONION_PUB_KEY_LEN);
+        db_options_get_bin(app->db, "onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
     }
 
     // Set default nickname if not defined
@@ -310,7 +310,7 @@ void app_start(struct app_data *app, int argc, char **argv) {
     // Generate onion domain from onion keys
     onion_address_from_pub_key(onion_pub_key, app->onion_address);
     app->onion_address[ONION_ADDRESS_LEN] = '\0';
-    db_options_set_text(app->db, "client_onion_address", app->onion_address, ONION_ADDRESS_LEN);
+    db_options_set_text(app->db, "onion_address", app->onion_address, ONION_ADDRESS_LEN);
 
     // Generate files used by hidden service
     if (!onion_init_dir(app->path.onion_dir, onion_pub_key, onion_priv_key)) {
@@ -334,9 +334,13 @@ void app_start(struct app_data *app, int argc, char **argv) {
         ui_logger_log(app->ui.shell, "|____/ \\___|\\___| .__/  |_|  |_|\\___||___/___/\\___|_| |_|\\__, |\\___|_|");
         ui_logger_log(app->ui.shell, "                |_|                                      |___/");
         ui_logger_printf(app->ui.shell, "\nVersion %s\nMade by rdobovic\n", DEEP_MESSENGER_APP_VERSION);
-        ui_logger_printf(app->ui.shell, "Type help for the  list of commands");
+        ui_logger_printf(app->ui.shell, "Type help for the list of commands\n");
     } else {
-        printf("Running as mailbox service, nothing yet :)\n");
+        printf("Starting Deep Messenger mailbox service\n");
+        printf("  Version:         %s\n", DEEP_MESSENGER_APP_VERSION);
+        printf("  Protocol:        Deep Messenger protocol %d\n", DEEP_MESSENGER_PROTOCOL_VER);
+        printf("  Mailbox address: %s\n", app->onion_address);
+        printf("  Public port:     %s\n\n", app->cf.mailbox_port);
     }
 
     // Init libevent and eventloop

@@ -33,7 +33,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     evbuffer_add(phand->buffer, pmain->transaction_id, TRANSACTION_ID_LEN);
     evbuffer_add(phand->buffer, acc->mb_acc->mailbox_id, MAILBOX_ID_LEN);
     
-    db_options_get_bin(acc->db, "mailbox_onion_private_key", mb_onion_priv_key, ONION_PRIV_KEY_LEN);
+    db_options_get_bin(acc->db, "onion_private_key", mb_onion_priv_key, ONION_PRIV_KEY_LEN);
     ed25519_buffer_sign(phand->buffer, 0, mb_onion_priv_key);
 }
 
