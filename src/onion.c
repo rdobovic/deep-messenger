@@ -36,6 +36,11 @@ int onion_address_valid(const char *onion_address) {
 
     const char onion_end[] = ".onion";
 
+    for (i = 0; i < ONION_ADDRESS_LEN; i++) {
+        if (onion_address[i] == '\0')
+            return 0;
+    }
+
     for (i = 0; i < ONION_ADDRESS_LEN - ONION_BASE_LEN; i++) {
         if (onion_address[i + ONION_BASE_LEN] != onion_end[i])
             return 0;

@@ -23,6 +23,7 @@
 // Filenames inside config directory
 #define APP_ONION_DIR     "onion"
 #define APP_TORRC_FILE    "torrc"
+#define APP_TORDATA_DIR   "tor_data"
 #define APP_DATABASE_FILE "messenger.db"
 
 // Default user nickname

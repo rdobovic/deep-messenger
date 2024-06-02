@@ -1,5 +1,5 @@
 build
-debug.log
+*.log
 *.db
 core
 deep_messenger_data

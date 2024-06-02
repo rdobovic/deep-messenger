@@ -15,6 +15,14 @@
 #include <ui_window.h>
 #include <ui_manager.h>
 
+// Log message to info UI window
+#define app_ui_info(app, ...) \
+    ui_logger_printf((app)->ui.info, __VA_ARGS__)
+
+// Log message to shell/console UI window
+#define app_ui_shell(app, ...) \
+    ui_logger_printf((app)->ui.shell, __VA_ARGS__)
+
 struct app_data {
     sqlite3 *db;
 
@@ -46,6 +54,7 @@ struct app_data {
         char *db_file;
         char *onion_dir;
         char *tor_bin;
+        char *tor_data;
     } path;
 
     // Global runtime config

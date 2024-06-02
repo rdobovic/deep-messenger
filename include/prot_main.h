@@ -108,7 +108,8 @@ struct prot_tran_handler {
 struct prot_main {
     struct hook_list *hooks;
 
-    int run_free;   // Protocol main should be freed after all hooks are executed
+    int run_free;     // Protocol main should be freed after all hooks are executed
+    int free_on_done; // Handler will free itself when done processing messages
     enum prot_modes mode;
     enum prot_status_codes status;
 
@@ -145,6 +146,10 @@ void prot_main_free(struct prot_main *pmain);
 // associated with PROT_MAIN_EV_DONE event, object is freed after
 // callback is executed
 void prot_main_defer_free(struct prot_main *pmain);
+
+// When set to 1 main protocol handler will free itself once it's
+// done processing all messages
+void prot_main_free_on_done(struct prot_main *pmain, int yes);
 
 // Called from inside of callback function, notifies given pmain
 // object that current receiver is done receiving

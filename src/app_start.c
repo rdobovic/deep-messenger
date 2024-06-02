@@ -174,6 +174,7 @@ void app_start(struct app_data *app, int argc, char **argv) {
 
     // Generate all needed paths
     app->path.torrc = allocate_add_path(app->path.data_dir, APP_TORRC_FILE);
+    app->path.tor_data = allocate_add_path(app->path.data_dir, APP_TORDATA_DIR);
     app->path.onion_dir = allocate_add_path(app->path.data_dir, APP_ONION_DIR);
     app->path.db_file = allocate_add_path(app->path.data_dir, APP_DATABASE_FILE);
 
@@ -192,6 +193,9 @@ void app_start(struct app_data *app, int argc, char **argv) {
     realpath(app->path.torrc, path);
     array_strcpy(app->path.torrc, path, -1);
 
+    realpath(app->path.tor_data, path);
+    array_strcpy(app->path.tor_data, path, -1);
+
     realpath(app->path.db_file, path);
     array_strcpy(app->path.db_file, path, -1);
     
@@ -204,6 +208,13 @@ void app_start(struct app_data *app, int argc, char **argv) {
     // Create hidden service directory if not existing
     if (stat(app->path.onion_dir, &st) == -1 && mkdir(app->path.onion_dir, 0700)) {
         printf("Failed to create hidden service directory %s\n", app->path.onion_dir);
+        perror("mkdir");
+        exit(EXIT_FAILURE);
+    }
+
+    // Create tor data directory
+    if (stat(app->path.tor_data, &st) == -1 && mkdir(app->path.tor_data, 0700)) {
+        printf("Failed to create tor data directory %s\n", app->path.tor_data);
         perror("mkdir");
         exit(EXIT_FAILURE);
     }
@@ -327,14 +338,14 @@ void app_start(struct app_data *app, int argc, char **argv) {
         app_ui_add_titles(app);
         ui_stack_redraw(app->ui.stack);
 
-        ui_logger_log(app->ui.shell, " ____                    __  __");
-        ui_logger_log(app->ui.shell, "|  _ \\  ___  ___ _ __   |  \\/  | ___  ___ ___  ___ _ __   __ _  ___ _ __");
-        ui_logger_log(app->ui.shell, "| | | |/ _ \\/ _ \\ '_ \\  | |\\/| |/ _ \\/ __/ __|/ _ \\ '_ \\ / _` |/ _ \\ '__|");
-        ui_logger_log(app->ui.shell, "| |_| |  __/  __/ |_) | | |  | |  __/\\__ \\__ \\  __/ | | | (_| |  __/ |");
-        ui_logger_log(app->ui.shell, "|____/ \\___|\\___| .__/  |_|  |_|\\___||___/___/\\___|_| |_|\\__, |\\___|_|");
-        ui_logger_log(app->ui.shell, "                |_|                                      |___/");
-        ui_logger_printf(app->ui.shell, "\nVersion %s\nMade by rdobovic\n", DEEP_MESSENGER_APP_VERSION);
-        ui_logger_printf(app->ui.shell, "Type help for the list of commands\n");
+        app_ui_shell(app, " ____                    __  __");
+        app_ui_shell(app, "|  _ \\  ___  ___ _ __   |  \\/  | ___  ___ ___  ___ _ __   __ _  ___ _ __");
+        app_ui_shell(app, "| | | |/ _ \\/ _ \\ '_ \\  | |\\/| |/ _ \\/ __/ __|/ _ \\ '_ \\ / _` |/ _ \\ '__|");
+        app_ui_shell(app, "| |_| |  __/  __/ |_) | | |  | |  __/\\__ \\__ \\  __/ | | | (_| |  __/ |");
+        app_ui_shell(app, "|____/ \\___|\\___| .__/  |_|  |_|\\___||___/___/\\___|_| |_|\\__, |\\___|_|");
+        app_ui_shell(app, "                |_|                                      |___/");
+        app_ui_shell(app, "\nVersion %s\nMade by rdobovic\n", DEEP_MESSENGER_APP_VERSION);
+        app_ui_shell(app, "Type help for the list of commands");
     } else {
         printf("Starting Deep Messenger mailbox service\n");
         printf("  Version:         %s\n", DEEP_MESSENGER_APP_VERSION);

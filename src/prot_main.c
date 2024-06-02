@@ -43,7 +43,7 @@ static int prot_main_done_check(struct prot_main *pmain) {
         hook_list_call(pmain->hooks, PROT_MAIN_EV_DONE, pmain);
         debug("Main protocol handler done processing all messages");
         
-        if (pmain->run_free) {
+        if (pmain->run_free || pmain->free_on_done) {
             debug("Time to free main protocol handler");
             prot_main_free(pmain);
             return 1;
@@ -112,6 +112,12 @@ void prot_main_free(struct prot_main *pmain) {
 // callback is executed
 void prot_main_defer_free(struct prot_main *pmain) {
     pmain->run_free = 1;
+}
+
+// When set to 1 main protocol handler will free itself once it's
+// done processing all messages
+void prot_main_free_on_done(struct prot_main *pmain, int yes) {
+    pmain->free_on_done = 1;
 }
 
 // Connect to given TOR client socks server and try to contact
