@@ -14,6 +14,7 @@
 #include <ui_logger.h>
 #include <ui_window.h>
 #include <ui_manager.h>
+#include <prot_main.h>
 
 // Log message to info UI window
 #define app_ui_info(app, ...) \
@@ -140,7 +141,13 @@ void app_ui_shell_select(struct ui_menu *menu, void *att);
 // Menu callback used to select contact
 void app_ui_contact_select(struct ui_menu *menu, void *att);
 
+// Refresh chat window with new messages
+void app_ui_chat_refresh(struct app_data *app, int keep_position);
+
 // Refresh displayed contacts list
 void app_update_contacts(struct app_data *app);
+
+// Add hooks to main protocol handler for incomming connection (app_actions.c)
+void app_pmain_add_hooks(struct app_data *app, struct prot_main *pmain);
 
 #endif

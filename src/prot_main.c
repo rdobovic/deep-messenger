@@ -295,6 +295,7 @@ static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx) {
                     phand = prot_handler_autogen_mailbox(message_code, pmain->db);
 
                 if (phand == NULL) {
+                    debug("Unknown message type");
                     prot_main_fail(pmain, PROT_ERR_INVALID_MSG);
                     return;
                 }

@@ -12,6 +12,8 @@
 #include <prot_main.h>
 #include <prot_transaction.h>
 #include <prot_mb_account.h>
+#include <prot_friend_req.h>
+#include <prot_mb_set_contacts.h>
 
 #include <app.h>
 
@@ -210,6 +212,198 @@ static void command_mbrmlocal(int argc, char **argv, void *cbarg) {
     db_options_set_text(app->db, "client_mailbox_onion_address", NULL, 0);
 }
 
+static void command_friendadd_hook_cb(int ev, void *data, void *cbarg) {
+    struct app_data *app = cbarg;
+    struct db_contact *friend = data;
+
+    if (ev != PROT_FRIEND_REQ_EV_OK) {
+        app_ui_shell(app, "error: Failed to send the friend request");
+        app_ui_shell(app, 
+            "This can happen for various reasons but the most common one "
+            "is that the person you are sending request to is offline, you "
+            "must both be online in order to exchange encryption keys"
+        );
+        return;
+    }
+
+    if (friend->status == DB_CONTACT_ACTIVE) {
+        app_ui_shell(app, "Successfully accepted %s's friend request you are now friends", 
+            friend->nickname);
+        app_update_contacts(app);
+        ui_stack_redraw(app->ui.stack);
+        return;
+    }
+
+    app_ui_shell(app,
+        "Successfully sent friend request to the %s, when other "
+        "client accepts your request you will be able to chat", friend->onion_address
+    );
+}
+
+// Send friend request
+static void command_friendadd(int argc, char **argv, void *cbarg) {
+    struct app_data *app = cbarg;
+
+    struct db_contact *friend;
+    struct prot_main *pmain;
+    struct prot_txn_req *txnreq;
+    struct prot_friend_req *freq;
+
+    if (!onion_address_valid(argv[1])) {
+        app_ui_shell(app, "error: Invalid client onion address provided");
+        return;
+    }
+
+    friend = db_contact_get_by_onion(app->db, argv[1], NULL);
+    if (friend && friend->deleted) {
+        app_ui_shell(app, "Removing deleted flag for given friend");
+        friend->deleted = 0;
+        db_contact_save(app->db, friend);
+
+        if (friend->status == DB_CONTACT_ACTIVE) {
+            app_update_contacts(app);
+            ui_stack_redraw(app->ui.stack);
+        }
+    }
+    if (friend && friend->status == DB_CONTACT_ACTIVE) {
+        app_ui_shell(app, "You are already friend with [%s] %s", friend->nickname, argv[1]);
+        app_ui_shell(app, "Nothing to do");
+        return;
+    }
+    if (friend && friend->status == DB_CONTACT_PENDING_OUT) {
+        app_ui_shell(app, "You have already sent friend request to this person");
+        app_ui_shell(app, "Nothing to do");
+        return;
+    }
+
+    app_ui_shell(app, "Sending friend request to %s", argv[1]);
+    app_ui_shell(app, "This could take some time...");
+
+    pmain = prot_main_new(app->base, app->db);
+    txnreq = prot_txn_req_new();
+    freq = prot_friend_req_new(app->db, argv[1]);
+
+    prot_main_free_on_done(pmain, 1);
+    hook_add(pmain->hooks, PROT_FRIEND_REQ_EV_OK, command_friendadd_hook_cb, app);
+    hook_add(pmain->hooks, PROT_FRIEND_REQ_EV_FAIL, command_friendadd_hook_cb, app);
+    prot_main_push_tran(pmain, &(txnreq->htran));
+    prot_main_push_tran(pmain, &(freq->htran));
+
+    prot_main_connect(pmain, argv[1], app->cf.app_port, "127.0.0.1", app->cf.tor_port);
+}
+
+// Send friend request
+static void command_friends(int argc, char **argv, void *cbarg) {
+    struct app_data *app = cbarg;
+    int i, n_conts, non_del_cnt = 0;
+    struct db_contact **conts;
+
+    conts = db_contact_get_all(app->db, &n_conts);
+
+    app_ui_shell(app, "List of all your friends and their statuses: ");
+
+    for (i = 0; i < n_conts; i++) {
+        if (conts[i]->deleted)
+            continue;
+
+        ++non_del_cnt;
+        switch (conts[i]->status) {
+            case DB_CONTACT_ACTIVE:
+                app_ui_shell(app, "  - [%s] - %s - ACTIVE", 
+                    conts[i]->nickname, conts[i]->onion_address);
+                break;
+            case DB_CONTACT_PENDING_IN:
+                app_ui_shell(app, "  - [%s] - %s - INCOMMING PENDING", 
+                    conts[i]->nickname, conts[i]->onion_address);
+                break;
+            case DB_CONTACT_PENDING_OUT:
+                app_ui_shell(app, "  - [????] - %s - OUTGOING PENDING",
+                    conts[i]->onion_address);
+                break;
+        }
+    }
+
+    app_ui_shell(app, "Total: %d", non_del_cnt);
+}
+
+// Delete given friend
+static void command_friendrm(int argc, char **argv, void *cbarg) {
+    struct app_data *app = cbarg;
+    struct db_contact *cont;
+
+    if (!onion_address_valid(argv[1])) {
+        app_ui_shell(app, "error: Invalid client onion address provided");
+        return;
+    }
+
+    cont = db_contact_get_by_onion(app->db, argv[1], NULL);
+    if (!cont || cont->deleted) {
+        app_ui_shell(app, "error: No such friend found in the database, nothing to delete");
+        return;
+    }
+
+    cont->deleted = 1;
+    db_contact_save(app->db, cont);
+    app_ui_shell(app, "Marked friend %s as deleted", argv[1]);
+
+    if (cont->status == DB_CONTACT_ACTIVE) {
+        app_update_contacts(app);
+        ui_stack_redraw(app->ui.stack);
+    }
+}
+
+static void command_mbcontacts_hook_cb(int ev, void *data, void *cbarg) {
+    struct app_data *app = cbarg;
+    
+    if (ev != PROT_MB_SET_CONTACTS_EV_OK) {
+        app_ui_shell(app, "error: Failed to update contact list on the mailbox server");
+        return;
+    }
+
+    app_ui_shell(app, "Successfully updated contact list on the mailbox server");
+}
+
+// Upload contact list to the mailbox server
+static void command_mbcontacts(int argc, char **argv, void *cbarg) {
+    struct app_data *app = cbarg;
+    int n_conts;
+    struct db_contact **conts;
+
+    struct prot_main *pmain;
+    struct prot_txn_req *txnreq;
+    struct prot_mb_set_contacts *setconts;
+
+    char mb_address[ONION_ADDRESS_LEN + 1];
+    uint8_t mb_id[MAILBOX_ID_LEN];
+    uint8_t mb_sig_priv_key[MAILBOX_ACCOUNT_KEY_PRIV_LEN];
+
+    if (!db_options_is_defined(app->db, "client_mailbox_id", DB_OPTIONS_BIN)) {
+        app_ui_shell(app, "error: You don't have mailbox account, cannot set contacts");
+        return;
+    }
+
+    app_ui_shell(app, "Attempting to update contact list on the mailbox server");
+    app_ui_shell(app, "This could take some time...");
+
+    db_options_get_bin(app->db, "client_mailbox_id", mb_id, MAILBOX_ID_LEN);
+    db_options_get_bin(app->db, "client_mailbox_sig_priv_key", mb_sig_priv_key, MAILBOX_ACCOUNT_KEY_PRIV_LEN);
+    db_options_get_text(app->db, "client_mailbox_onion_address", mb_address, ONION_ADDRESS_LEN + 1);
+
+    conts = db_contact_get_all(app->db, &n_conts);
+
+    pmain = prot_main_new(app->base, app->db);
+    txnreq = prot_txn_req_new();
+    setconts = prot_mb_set_contacts_new(app->db, mb_address, mb_id, mb_sig_priv_key, conts, n_conts);
+
+    prot_main_free_on_done(pmain, 1);
+    hook_add(pmain->hooks, PROT_MB_SET_CONTACTS_EV_OK, command_mbcontacts_hook_cb, app);
+    hook_add(pmain->hooks, PROT_MB_SET_CONTACTS_EV_FAIL, command_mbcontacts_hook_cb, app);
+    prot_main_push_tran(pmain, &(txnreq->htran));
+    prot_main_push_tran(pmain, &(setconts->htran));
+
+    prot_main_connect(pmain, mb_address, app->cf.mailbox_port, "127.0.0.1", app->cf.tor_port);
+}
+
 // Handle config shell commands
 void app_ui_handle_cmd(struct ui_prompt *prt, void *att) {
     const char *err;
@@ -217,17 +411,21 @@ void app_ui_handle_cmd(struct ui_prompt *prt, void *att) {
 
     // Command templates
     struct cmd_template cmds[] = {
-        {"help",      0, command_help,      app},
-        {"info",      0, command_info,      app},
-        {"version",   0, command_version,   app},
-        {"mbreg",     2, command_mbreg,     app},
-        {"mbrm",      0, command_mbrm,      app},
-        {"mbrmlocal", 0, command_mbrmlocal, app},
+        {"help",       0, command_help,       app},
+        {"info",       0, command_info,       app},
+        {"version",    0, command_version,    app},
+        {"mbreg",      2, command_mbreg,      app},
+        {"mbrm",       0, command_mbrm,       app},
+        {"mbrmlocal",  0, command_mbrmlocal,  app},
+        {"friendadd",  1, command_friendadd,  app},
+        {"friends",    0, command_friends,    app},
+        {"friendrm",   1, command_friendrm,   app},
+        {"mbcontacts", 0, command_mbcontacts, app},
     };
 
-    app_ui_shell(app, "\n> %ls", prt->input_buffer);
+    app_ui_shell(app, "> %ls", prt->input_buffer);
 
-    if (err = cmd_parse(cmds, 6, ui_prompt_get_input(prt))) {
+    if (err = cmd_parse(cmds, 10, ui_prompt_get_input(prt))) {
         app_ui_shell(app, "error: %s", err);
     }
     ui_prompt_clear(prt);

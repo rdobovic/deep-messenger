@@ -143,6 +143,7 @@ static void app_accept_connection(struct evconnlistener *listener,
     bev = bufferevent_socket_new(base, sock, BEV_OPT_CLOSE_ON_FREE);
     pmain = prot_main_new(base, app->db);
 
-    pmain->mode = app->cf.is_mailbox ? PROT_MODE_MAILBOX : PROT_MODE_MAILBOX;
+    app_pmain_add_hooks(app, pmain);
+    pmain->mode = app->cf.is_mailbox ? PROT_MODE_MAILBOX : PROT_MODE_CLIENT;
     prot_main_assign(pmain, bev);
 }

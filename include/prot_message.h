@@ -13,6 +13,12 @@ enum prot_message_to {
     PROT_MESSAGE_TO_MAILBOX,
 };
 
+enum prot_message_events {
+    PROT_MESSAGE_EV_OK        = 0x8401,
+    PROT_MESSAGE_EV_FAIL      = 0x8402,
+    PROT_MESSAGE_EV_INCOMMING = 0x8403,
+};
+
 struct prot_message {
     sqlite3 *db;
     struct hook_list *hooks;

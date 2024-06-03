@@ -36,6 +36,56 @@ void app_ui_shell_select(struct ui_menu *menu, void *att) {
     ui_stack_redraw(app->ui.stack);
 }
 
+void app_ui_chat_refresh(struct app_data *app, int keep_position) {
+    int i, i_line, i_wrap;
+    int n_messages;
+    struct db_message **messages;
+
+    if (!app->cont_selected)
+        return;
+
+    i_line = app->ui.chat->i_line;
+    i_wrap = app->ui.chat->i_wrap;
+
+    ui_logger_clear(app->ui.chat);
+    ui_logger_printf(app->ui.chat, "== Start of chat with [%s] == %s ==\n",
+        app->cont_selected->nickname, app->cont_selected->onion_address);
+
+    messages = db_message_get_all(app->db, app->cont_selected, DB_MESSAGE_STATUS_ANY, &n_messages);
+
+    for (i = 0; i < n_messages; i++) {
+        wchar_t *text;
+        char status;
+
+        if (messages[i]->type != DB_MESSAGE_TEXT)
+            continue;
+
+        switch (messages[i]->status) {
+            case DB_MESSAGE_STATUS_RECV:           status = 'r'; break;
+            case DB_MESSAGE_STATUS_RECV_CONFIRMED: status = 'R'; break;
+            case DB_MESSAGE_STATUS_SENT:           status = 's'; break;
+            case DB_MESSAGE_STATUS_SENT_CONFIRMED: status = 'S'; break;
+            case DB_MESSAGE_STATUS_UNDELIVERED:    status = 'U'; break;
+        }
+
+        if (messages[i]->sender == DB_MESSAGE_SENDER_ME) {
+            ui_logger_printf(app->ui.chat, "%*s[me] |%c| %s",
+                strlen(app->cont_selected->nickname) - 2, "", status, messages[i]->body_text);
+        } else {
+            ui_logger_printf(app->ui.chat, "[%s] |%c| %s",
+                app->cont_selected->nickname, status, messages[i]->body_text);
+        }
+    }
+
+    if (keep_position) {
+        app->ui.chat->i_line = i_line;
+        app->ui.chat->i_wrap = i_wrap;
+    }
+
+    app_ui_add_titles(app);
+    ui_stack_redraw(app->ui.stack);
+}
+
 void app_ui_contact_select(struct ui_menu *menu, void *att) {
     struct app_data *app = att;
     int i;
@@ -46,32 +96,11 @@ void app_ui_contact_select(struct ui_menu *menu, void *att) {
 
     ui_prompt_clear(app->ui.prompt_chat);
     ui_prompt_attach(app->ui.prompt_chat, app->ui.promptwin);
+
     ui_logger_clear(app->ui.chat);
     ui_logger_attach(app->ui.chat, app->ui.chatwin);
-    ui_logger_printf(app->ui.chat, "== Start of chat with [%s] == %s ==\n",
-        app->cont_selected->nickname, app->cont_selected->onion_address);
 
-    messages = db_message_get_all(app->db, app->cont_selected, DB_MESSAGE_STATUS_ANY, &n_messages);
-
-    for (i = 0; i < n_messages; i++) {
-        wchar_t *text;
-
-        if (messages[i]->type != DB_MESSAGE_TEXT)
-            continue;
-
-        debug("");
-
-        if (messages[i]->sender == DB_MESSAGE_SENDER_ME) {
-            ui_logger_printf(app->ui.chat, "%*s[me] |U| %s",
-                strlen(app->cont_selected->nickname) - 2, "", messages[i]->body_text);
-        } else {
-            ui_logger_printf(app->ui.chat, "[%s] |A| %s",
-                app->cont_selected->nickname, messages[i]->body_text);
-        }
-    }
-    
-    app_ui_add_titles(app);
-    ui_stack_redraw(app->ui.stack);
+    app_ui_chat_refresh(app, 0);
 }
 
 void app_update_contacts(struct app_data *app) {
@@ -92,6 +121,9 @@ void app_update_contacts(struct app_data *app) {
     for (i = 0; i < app->n_contacts; i++) {
         char label[UI_MENU_LABEL_SIZE];
         app->cont_selected = app->contacts[i];
+
+        if (app->cont_selected->deleted || app->cont_selected->status != DB_CONTACT_ACTIVE)
+            continue;
 
         snprintf(label, UI_MENU_LABEL_SIZE - 1, "@%s", app->cont_selected->nickname);
         ui_menu_add(app->ui.contacts, i + 1, label, app_ui_contact_select, app);

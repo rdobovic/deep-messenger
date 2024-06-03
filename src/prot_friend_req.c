@@ -24,6 +24,8 @@ static void ack_received_cb(int ack_success, struct prot_main *pmain, void *arg)
         db_contact_save(msg->db, msg->friend);
     }
 
+    hook_list_call(pmain->hooks, 
+        ack_success ? PROT_FRIEND_REQ_EV_OK : PROT_FRIEND_REQ_EV_FAIL, msg->friend);
     prot_friend_req_free(msg);
 }
 
@@ -42,6 +44,8 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 // Free friend request object
 static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_friend_req *msg = phand->msg;
+
+    hook_list_call(pmain->hooks, PROT_FRIEND_REQ_EV_FAIL, msg->friend);
     prot_friend_req_free(msg);
 }
 
@@ -51,8 +55,8 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     char nick[CLIENT_NICK_MAX_LEN + 1];
     struct prot_friend_req *msg = phand->msg;
 
-    char onion_address[ONION_ADDRESS_LEN];      // My onion address
-    char mb_onion_address[ONION_ADDRESS_LEN];   // My mailbox address
+    char onion_address[ONION_ADDRESS_LEN + 1];      // My onion address
+    char mb_onion_address[ONION_ADDRESS_LEN + 1];   // My mailbox address
     uint8_t mb_id[MAILBOX_ID_LEN];              // My mailbox ID
     uint8_t onion_priv_key[ONION_PRIV_KEY_LEN]; // My onion private key (to sign the message)
 
@@ -62,9 +66,11 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
     rsa_2048bit_keygen(msg->friend->local_enc_key_pub, msg->friend->local_enc_key_priv);
 
     // Fetch data from the database
-    db_options_get_text(msg->db, "onion_address", onion_address, ONION_ADDRESS_LEN);
+    db_options_get_text(msg->db, "onion_address", onion_address, ONION_ADDRESS_LEN + 1);
     db_options_get_bin(msg->db, "onion_private_key", onion_priv_key, ONION_PRIV_KEY_LEN);
     nick_len = db_options_get_text(msg->db, "client_nickname", nick, CLIENT_NICK_MAX_LEN);
+
+    debug("Nick len: %d", nick_len);
 
     // If client has mailbox use mailbox fields, otherwise set them to 0
     if (db_options_is_defined(msg->db, "client_mailbox_id", DB_OPTIONS_BIN)) {
@@ -73,7 +79,7 @@ static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand)
         memset(mb_id, 0, sizeof(mb_id));
     }
     if (db_options_is_defined(msg->db, "client_mailbox_onion_address", DB_OPTIONS_TEXT)) {
-        db_options_get_text(msg->db, "client_mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN);
+        db_options_get_text(msg->db, "client_mailbox_onion_address", mb_onion_address, ONION_ADDRESS_LEN + 1);
     } else {
         memset(mb_onion_address, 0, sizeof(mb_onion_address));
     }
@@ -107,6 +113,7 @@ static void ack_sent_cb(int ack_success, struct prot_main *pmain, void *arg) {
 
     if (ack_success) {
         db_contact_save(msg->db, msg->friend);
+        hook_list_call(pmain->hooks, PROT_FRIEND_REQ_EV_INCOMMING, msg->friend);
     }
 
     prot_friend_req_free(msg);
@@ -136,14 +143,19 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     if (evbuffer_get_length(input) < message_len)
         return;
 
+    debug("LEN 1 OK");
+
     message_static = evbuffer_pullup(input, message_len);
     nick_len = message_static[message_len - 1]; // Last byte of static fields
+    debug("nick len: %d", nick_len);
 
     // If nick is too large
     if (nick_len > CLIENT_NICK_MAX_LEN) {
         prot_main_set_error(pmain, PROT_ERR_INVALID_MSG); 
         return;
     }
+
+    debug("NICK LEN OK");
 
     // Add nickname and signature length
     message_len += nick_len + ED25519_SIGNATURE_LEN;
@@ -152,18 +164,24 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     if (evbuffer_get_length(input) < message_len)
         return;
 
+    debug("LEN 2 OK");
+
     onion_addr_ptr = message_static + PROT_HEADER_LEN + TRANSACTION_ID_LEN;
 
     if (!onion_address_valid(onion_addr_ptr)) {
-        prot_main_set_error(pmain, PROT_ERR_INVALID_MSG); 
+        prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
         return;
     }
+
+    debug("ONION OK");
 
     onion_extract_key(onion_addr_ptr, received_onion_key);
     if (!ed25519_buffer_validate(input, message_len, received_onion_key)) {
         prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
         return;
     }
+
+    debug("BUFFER SIG OK");
 
     evbuffer_drain(input, PROT_HEADER_LEN + TRANSACTION_ID_LEN);
     evbuffer_remove(input, received_onion_address, ONION_ADDRESS_LEN);
@@ -172,7 +190,11 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     msg->friend = db_contact_get_by_onion(msg->db, received_onion_address, NULL);
     if (!msg->friend) {
         msg->friend = db_contact_new();
+        msg->friend->status = DB_CONTACT_PENDING_IN;
         memcpy(msg->friend->onion_address, received_onion_address, ONION_ADDRESS_LEN);
+        
+    } else if (msg->friend->status == DB_CONTACT_PENDING_OUT) {
+        msg->friend->status = DB_CONTACT_ACTIVE;
     }
 
     evbuffer_remove(input, msg->friend->remote_sig_key_pub, CLIENT_SIG_KEY_PUB_LEN);
@@ -197,6 +219,8 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     ack = prot_ack_ed25519_new(PROT_ACK_ONION, NULL, onion_priv_key, ack_sent_cb, msg);
     prot_main_push_tran(pmain, &(ack->htran));
     pmain->current_recv_done = 1;
+
+    debug("ALL DONE");
 }
 
 // Allocate new friend request handler
@@ -214,7 +238,10 @@ struct prot_friend_req * prot_friend_req_new(sqlite3 *db, const char *onion_addr
 
         if (!msg->friend) {
             msg->friend = db_contact_new();
+            msg->friend->status = DB_CONTACT_PENDING_OUT;
             memcpy(msg->friend->onion_address, onion_address, ONION_ADDRESS_LEN);
+        } else {
+            msg->friend->status = DB_CONTACT_ACTIVE;
         }
     }
 

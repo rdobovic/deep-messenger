@@ -26,6 +26,7 @@ void db_init_schema(sqlite3 *db) {
         "CREATE TABLE IF NOT EXISTS client_contacts ("
             "id INTEGER,"
             "status INTEGER,"
+            "deleted INTEGER,"
             "nickname TEXT,"
             "onion_address TEXT,"
             "onion_pub_key BLOB,"

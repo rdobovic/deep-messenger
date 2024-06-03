@@ -79,7 +79,10 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         return;
     }
 
-    if (!(cont = db_contact_get_by_rsk_pub(msg->db, sig_pub_key, NULL))) {
+    if (
+        !(cont = db_contact_get_by_rsk_pub(msg->db, sig_pub_key, NULL))
+        || cont->status != DB_CONTACT_ACTIVE || cont->deleted
+    ) {
         prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
         return;
     }

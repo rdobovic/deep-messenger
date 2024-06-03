@@ -5,6 +5,12 @@
 #include <prot_main.h>
 #include <db_contact.h>
 
+enum prot_friend_req_events {
+    PROT_FRIEND_REQ_EV_OK        = 0x8101,
+    PROT_FRIEND_REQ_EV_FAIL      = 0x8102,
+    PROT_FRIEND_REQ_EV_INCOMMING = 0x8103,
+};
+
 // Friend request data structure
 struct prot_friend_req {
     sqlite3 *db;

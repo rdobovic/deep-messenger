@@ -17,6 +17,8 @@ struct db_contact {
     int id;
     // Current friend status (active, pending incomming/outgoing)
     enum db_contact_status status;
+    // Contact is deleted
+    int deleted;
     // User nickname
     int nickname_len;
     char nickname[CLIENT_NICK_MAX_LEN + 1];

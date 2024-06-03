@@ -14,16 +14,18 @@
 #include <prot_ack.h>
 #include <buffer_crypto.h>
 #include <debug.h>
+#include <hooks.h>
 
 // Called when ACK is arrived or failed to arrive
 static void ack_received(int ack_success, struct prot_main *pmain, void *arg) {
     struct prot_message *msg = arg;
 
     if (ack_success) {
-        msg->client_msg->status = DB_MESSAGE_STATUS_SENT;
         db_message_save(msg->db, msg->client_msg);
     }
 
+    hook_list_call(pmain->hooks,
+        ack_success ? PROT_MESSAGE_EV_OK : PROT_MESSAGE_EV_FAIL, msg->client_msg);
     prot_message_free(msg);
 }
 
@@ -36,12 +38,14 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
     if (pmain->mode != PROT_MODE_CLIENT) return;
 
     if (msg->to == PROT_MESSAGE_TO_CLIENT) {
+        msg->client_msg->status = DB_MESSAGE_STATUS_SENT_CONFIRMED;
         ack = prot_ack_ed25519_new(PROT_ACK_SIGNATURE, msg->client_cont->remote_sig_key_pub, NULL, ack_received, msg);
     }
 
     if (msg->to == PROT_MESSAGE_TO_MAILBOX) {
         uint8_t onion_key[ONION_PUB_KEY_LEN];
 
+        msg->client_msg->status = DB_MESSAGE_STATUS_SENT;
         onion_extract_key(msg->client_cont->mailbox_onion, onion_key);
         ack = prot_ack_ed25519_new(PROT_ACK_ONION, onion_key, NULL, ack_received, msg);
     }
@@ -53,6 +57,7 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 // Free message handler object
 static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_message *msg = phand->msg;
+    hook_list_call(pmain->hooks, PROT_MESSAGE_EV_FAIL, msg->client_msg);
     prot_message_free(msg);
 }
 
@@ -118,6 +123,10 @@ static void ack_sent(int ack_success, struct prot_main *pmain, void *arg) {
 
         if (msg->mailbox_msg)
             db_mb_message_save(msg->db, msg->mailbox_msg);
+
+        if (pmain->mode == PROT_MODE_CLIENT) {
+            hook_list_call(pmain->hooks, PROT_MESSAGE_EV_INCOMMING, msg->client_msg);
+        }
     }
 
     prot_message_free(msg);
@@ -188,7 +197,10 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
             MAILBOX_ID_LEN + CLIENT_SIG_KEY_PUB_LEN + MESSAGE_ID_LEN);
 
         // If given contact doesn't exist quit
-        if(!(msg->client_cont = db_contact_get_by_rsk_pub(msg->db, signing_pub_key, NULL))) {
+        if(
+            !(msg->client_cont = db_contact_get_by_rsk_pub(msg->db, signing_pub_key, NULL)) 
+            || msg->client_cont->status != DB_CONTACT_ACTIVE || msg->client_cont->deleted
+        ) {
             prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
             goto cl_err;
         }
@@ -213,6 +225,9 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         evbuffer_remove(plain, &ctype, sizeof(ctype));
         plain_len = evbuffer_get_length(plain);
         plain_data = evbuffer_pullup(plain, plain_len);
+
+        msg->client_msg->type = ctype;
+        msg->client_msg->status = DB_MESSAGE_STATUS_RECV_CONFIRMED;
 
         switch (ctype) {
             case DB_MESSAGE_TEXT:
@@ -271,9 +286,6 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
                 prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
                 goto cl_err;
         }
-
-        msg->client_msg->type = ctype;
-        msg->client_msg->status = DB_MESSAGE_STATUS_RECV;
 
         cl_ack_send:
         ack = prot_ack_ed25519_new(PROT_ACK_SIGNATURE, NULL, msg->client_cont->local_sig_key_priv, ack_sent, msg);
