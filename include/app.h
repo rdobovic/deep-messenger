@@ -71,6 +71,8 @@ struct app_data {
         char tor_port[MAX_PORT_STR_LEN];
         // In manual mode some startup procedures are not ran
         int manual_mode;
+        // Send all messages to mailboxes instead of sending directlly
+        int mb_direct;
     } cf;
 
     // Global UI related data
@@ -152,5 +154,8 @@ void app_pmain_add_hooks(struct app_data *app, struct prot_main *pmain);
 
 // Sync messages with given contact
 void app_contact_sync(struct app_data *app, struct db_contact *cont);
+
+// Sync messages from your mailbox account
+void app_mailbox_sync(struct app_data *app);
 
 #endif

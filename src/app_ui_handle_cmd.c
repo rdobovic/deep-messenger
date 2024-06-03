@@ -404,7 +404,7 @@ static void command_mbcontacts(int argc, char **argv, void *cbarg) {
     prot_main_connect(pmain, mb_address, app->cf.mailbox_port, "127.0.0.1", app->cf.tor_port);
 }
 
-// Upload contact list to the mailbox server
+// Upload sync messages with another client
 static void command_sync(int argc, char **argv, void *cbarg) {
     struct app_data *app = cbarg;
     struct db_contact *cont;
@@ -421,6 +421,47 @@ static void command_sync(int argc, char **argv, void *cbarg) {
 
     app_ui_shell(app, "Attempting message sync in the background");
     app_contact_sync(app, cont);
+}
+
+// Set mb_direct configuration option value
+static void command_mbdirect(int argc, char **argv, void *cbarg) {
+    int value;
+    struct app_data *app = cbarg;
+
+    // Only valid values are 0 and 1
+    if (sscanf(argv[1], "%d", &value) != 1 || (value != 1 && value != 0)) {
+        app_ui_shell(app, "error: Only valid values for this option are 1 and 0");
+        return;
+    }
+
+    app->cf.mb_direct = value;
+    app_ui_shell(app, "Set app->cf.mb_direct = %d", value);
+}
+
+// Upload contact list to the mailbox server
+static void command_mbsync(int argc, char **argv, void *cbarg) {
+    struct app_data *app = cbarg;
+    
+    if (!db_options_is_defined(app->db, "client_mailbox_id", DB_OPTIONS_BIN)) {
+        app_ui_shell(app, "error: Cannot sync with mailbox, you have no mailbox");
+        return;
+    }
+
+    app_ui_shell(app, "Attempting message sync in the background");
+    app_mailbox_sync(app);
+}
+
+// Upload contact list to the mailbox server
+static void command_tor(int argc, char **argv, void *cbarg) {
+    struct app_data *app = cbarg;
+    
+    if (app->tor_process) {
+        app_ui_shell(app, "error: Tor has already started");
+        return;
+    }
+
+    app_ui_shell(app, "Starting tor client");
+    app_tor_start(app);
 }
 
 // Handle config shell commands
@@ -441,11 +482,14 @@ void app_ui_handle_cmd(struct ui_prompt *prt, void *att) {
         {"friendrm",   1, command_friendrm,   app},
         {"mbcontacts", 0, command_mbcontacts, app},
         {"sync",       1, command_sync,       app},
+        {"mbdirect",   1, command_mbdirect,   app},
+        {"mbsync",     0, command_mbsync,     app},
+        {"tor",        0, command_tor,        app},
     };
 
     app_ui_shell(app, "> %ls", prt->input_buffer);
 
-    if (err = cmd_parse(cmds, 11, ui_prompt_get_input(prt))) {
+    if (err = cmd_parse(cmds, 14, ui_prompt_get_input(prt))) {
         app_ui_shell(app, "error: %s", err);
     }
     ui_prompt_clear(prt);

@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <db_contact.h>
 
 #include <app.h>
 
@@ -47,10 +48,28 @@ static void tor_handle_output(evutil_socket_t fd, short what, void *arg) {
 
             if (str_ends_with(app->tor_line_buffer, TOR_SUCCESS_LINE)) {
                 app->tor_ready = 1;
-                if (app->cf.is_mailbox)
+                if (app->cf.is_mailbox) {
                     printf("[Tor] client ready\n");
-                else
+                } else {
                     ui_logger_log(app->ui.info, "[Tor] client ready");
+
+                    // If app is not running in manual mode run syncs
+                    if (!app->cf.manual_mode) {
+                        int i, n_conts;
+                        struct db_contact **conts;
+                        // Sync with mailbox
+                        app_mailbox_sync(app);
+                        // Sync with friends
+                        conts = db_contact_get_all(app->db, &n_conts);
+                        for (i = 0; i < n_conts; i++) {
+                            if (!conts[i]->deleted && conts[i]->status == DB_CONTACT_ACTIVE)
+                                app_contact_sync(app, conts[i]);
+                            else
+                                db_contact_free(conts[i]);
+                        }
+                        free(conts); // Don't free contacts just the array
+                    }
+                }
             }
 
             app->tor_line_buffer_len = 0;

@@ -153,7 +153,7 @@ struct db_mb_contact * db_mb_contact_get_by_acc_and_key(
     struct db_mb_contact *cont;
 
     const char sql[] =
-        "SELECT * FROM mailbox_contacts WHERE account_id = ? AND key = ?";
+        "SELECT * FROM mailbox_contacts WHERE account_id = ? AND signing_pub_key = ?";
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
         sys_db_crash(db, "Failed to fetch mailbox contact (by acc and key)");

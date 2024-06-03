@@ -20,6 +20,7 @@
 #include <prot_client_fetch.h>
 #include <prot_mb_account.h>
 #include <prot_mb_set_contacts.h>
+#include <prot_mb_fetch.h>
 
 // Internal bufferevent callbacks
 static void prot_main_bev_read_cb(struct bufferevent *bev, void *ctx);
@@ -579,6 +580,20 @@ struct prot_recv_handler *prot_handler_autogen_mailbox(enum prot_message_codes c
     if (code == PROT_MAILBOX_SET_CONTACTS) {
         struct prot_mb_set_contacts *msg;
         msg = prot_mb_set_contacts_new(db, NULL, NULL, NULL, NULL, 0);
+
+        return &(msg->hrecv);
+    }
+
+    if (code == PROT_MESSAGE_CONTAINER) {
+        struct prot_message *msg;
+        msg = prot_message_to_mailbox_new(db, NULL);
+
+        return &(msg->hrecv);
+    }
+
+    if (code == PROT_MAILBOX_FETCH) {
+        struct prot_mb_fetch *msg;
+        msg = prot_mb_fetch_new(db);
 
         return &(msg->hrecv);
     }

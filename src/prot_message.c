@@ -77,7 +77,7 @@ static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phan
 static void tran_setup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_message *msg = phand->msg;
 
-    debug("Running msg tran");
+    debug(">>>>> Running msg tran <<<<<");
 
     // Only client can send a message outside the message list
     if (pmain->mode == PROT_MODE_CLIENT) {
@@ -184,11 +184,15 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     evbuffer_ptr_set(input, &pos, PROT_HEADER_LEN + TRANSACTION_ID_LEN + MAILBOX_ID_LEN, EVBUFFER_PTR_SET);
     evbuffer_copyout_from(input, &pos, signing_pub_key, CLIENT_SIG_KEY_PUB_LEN);
 
+    debug("Message length OK");
+
     // If message signature is invalid
     if (!ed25519_buffer_validate(input, message_len, signing_pub_key)) {
         prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
         return;
     }
+
+    debug("Message buffer SIG OK");
 
     // Extract message GID from the buffer
     evbuffer_ptr_set(input, &pos, PROT_HEADER_LEN + TRANSACTION_ID_LEN +
@@ -352,6 +356,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         phand->cleanup_cb = NULL;
 
         mb_err:
+        evbuffer_drain(input, message_len);
         db_mb_account_free(mb_account);
         db_mb_contact_free(mb_contact);
         return;

@@ -15,6 +15,7 @@
 #include <db_options.h>
 #include <array.h>
 #include <prot_client_fetch.h>
+#include <prot_mb_fetch.h>
 
 // Called when message list is sent successfully
 static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) {
@@ -140,7 +141,7 @@ static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phan
         if (msg->from == PROT_MESSAGE_LIST_FROM_CLIENT)
             hook_list_call(pmain->hooks, PROT_CLIENT_FETCH_EV_FAIL, NULL);
         if (msg->from == PROT_MESSAGE_LIST_FROM_MAILBOX)
-            /* CALL MAILBOX FETCH HOOK */;
+            hook_list_call(pmain->hooks, PROT_MB_FETCH_EV_FAIL, NULL);
     }
 
     prot_message_list_free(msg);
@@ -174,18 +175,20 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
     if (evbuffer_get_length(input) < message_len)
         return;
 
+    debug("Length OK");
+
     // If message is from client use client key to verify it, otherwise use
     // mailbox onion key
     if (msg->from == PROT_MESSAGE_LIST_FROM_CLIENT) {
         memcpy(key, msg->client_cont->remote_sig_key_pub, CLIENT_SIG_KEY_PUB_LEN);
     } else {
         char mb_onion[ONION_ADDRESS_LEN + 1];
-        db_options_get_bin(msg->db, "client_mailbox_onion_address", 
+        db_options_get_text(msg->db, "client_mailbox_onion_address", 
             mb_onion, ONION_ADDRESS_LEN + 1);
         onion_extract_key(mb_onion, key);
     }
 
-    if (!ed25519_buffer_validate(input, 0, key)) {
+    if (!ed25519_buffer_validate(input, message_len, key)) {
         prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
         return;
     }
@@ -247,7 +250,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         }
 
         // Search for the sender in the database
-        if (!db_contact_get_by_rsk_pub(msg->db, contact_sig_key, msg->client_cont)) {
+        if (!(msg->client_cont = db_contact_get_by_rsk_pub(msg->db, contact_sig_key, msg->client_cont))) {
             goto message_free;
         }
 
@@ -257,7 +260,9 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         evbuffer_drain(input, header_len - sizeof(data_len) - MESSAGE_ID_LEN);
         evbuffer_remove(input, gid, MESSAGE_ID_LEN);
 
+        debug("Message checking existance");
         if (dbmsg = db_message_get_by_gid(msg->db, gid, NULL)) {
+            debug("Message exists NOT OK");
             goto message_free;
         }
         debug("Message doesn't exist OK");
@@ -269,6 +274,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
             debug("Failed to decrypt: %d", rc);
             goto message_free;
         }
+        debug("Message decrypted");
 
         evbuffer_remove(plain, &ctype, sizeof(ctype));
         plain_len = evbuffer_get_length(plain);
@@ -279,7 +285,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         dbmsg->contact_id = msg->client_cont->id;
         memcpy(dbmsg->global_id, gid, MESSAGE_ID_LEN);
 
-        dbmsg->status = pmain->mode == PROT_MODE_CLIENT ? 
+        dbmsg->status = msg->from == PROT_MESSAGE_LIST_FROM_CLIENT ? 
             DB_MESSAGE_STATUS_RECV_CONFIRMED : DB_MESSAGE_STATUS_RECV;
 
         switch (ctype) {
@@ -344,9 +350,9 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         dbmsg = NULL;
 
         message_free:
-        evbuffer_free(plain);
         evbuffer_drain(input, message_len);
-
+        if (plain)
+            evbuffer_free(plain);
         if (dbmsg)
             db_message_free(dbmsg);
     }
@@ -355,8 +361,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
         hook_list_call(pmain->hooks, PROT_CLIENT_FETCH_EV_OK, &evdata);
     }
     if (msg->from == PROT_MESSAGE_LIST_FROM_MAILBOX) {
-        // CALL MAILBOX FETCH HOOK
-        // ...
+        hook_list_call(pmain->hooks, PROT_MB_FETCH_EV_OK, &evdata);
     }
 
     for (i = 0; i < evdata.n_messages; i++) {

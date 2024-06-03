@@ -6,6 +6,7 @@
 #include <prot_message.h>
 #include <prot_message_list.h>
 #include <prot_client_fetch.h>
+#include <prot_mb_fetch.h>
 #include <prot_transaction.h>
 #include <debug.h>
 #include <app.h>
@@ -78,7 +79,7 @@ void app_pmain_add_hooks(struct app_data *app, struct prot_main *pmain) {
     hook_add(pmain->hooks, PROT_CLIENT_FETCH_EV_INCOMMING, hook_client_fetch, app);
 }
 
-// Handle incomming message
+// Handle contact sync response
 static void hook_contact_sync(int ev, void *data, void *cbarg) {
     int i, ref_chat = 0, ref_contacts = 0;
     struct app_data *app = cbarg;
@@ -164,4 +165,56 @@ void app_contact_sync(struct app_data *app, struct db_contact *cont) {
     prot_main_push_tran(pmain, &(clfet->htran));
     prot_main_connect(pmain, cont->onion_address,
         app->cf.app_port, "127.0.0.1", app->cf.tor_port);
+}
+
+// Handle mb sync response
+static void hook_mb_sync(int ev, void *data, void *cbarg) {
+    struct app_data *app = cbarg;
+    struct prot_message_list_ev_data *evdata = data;
+    int i, ref_chat = 0, ref_contacts = 0;
+
+    if (ev == PROT_MB_FETCH_EV_FAIL) {
+        return;
+    }
+
+    app_ui_info(app, "[Message] Fetched %d new messages from the mailbox", evdata->n_messages);
+
+    for (i = 0; i < evdata->n_messages; i++) {
+        // If someone changed their nickname refresh UI
+        if (evdata->messages[i]->type == DB_MESSAGE_NICK) {
+            ref_contacts = 1;
+        }
+        // If this is message for opened chat refresh the chat
+        if (app->cont_selected && app->cont_selected->id == evdata->messages[i]->contact_id) {
+            ref_chat = 1;
+        }
+    }
+
+    if (ref_chat) {
+        app_ui_chat_refresh(app, 0);
+    }
+    if (ref_contacts) {
+        app_update_contacts(app);
+        app_ui_info(app, "[Message] Someone changed their nickname, refreshing UI");
+    }
+}
+
+// Sync messages from your mailbox account
+void app_mailbox_sync(struct app_data *app) {
+    struct prot_main *pmain;
+    struct prot_txn_req *treq;
+    struct prot_mb_fetch *mbfet;
+
+    pmain = prot_main_new(app->base, app->db);
+    treq = prot_txn_req_new();
+    mbfet = prot_mb_fetch_new(app->db);
+
+    prot_main_free_on_done(pmain, 1);
+    hook_add(pmain->hooks, PROT_MB_FETCH_EV_OK, hook_mb_sync, app);
+    hook_add(pmain->hooks, PROT_MB_FETCH_EV_FAIL, hook_mb_sync, app);
+    prot_main_push_tran(pmain, &(treq->htran));
+    prot_main_push_tran(pmain, &(mbfet->htran));
+
+    prot_main_connect(pmain, mbfet->mb_onion_address,
+        app->cf.mailbox_port, "127.0.0.1", app->cf.tor_port);
 }

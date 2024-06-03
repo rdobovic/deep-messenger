@@ -13,7 +13,7 @@ static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phan
     struct prot_ack_ed25519 *ack = phand->msg;
 
     if (!ack->ack_success && ack->cb)
-        ack->cb(0, NULL, ack->cbarg);
+        ack->cb(0, pmain, ack->cbarg);
 
     prot_ack_ed25519_free(ack);
 }
@@ -43,7 +43,7 @@ static void recv_cleanup(struct prot_main *pmain, struct prot_recv_handler *phan
     struct prot_ack_ed25519 *ack = phand->msg;
 
     if (!ack->ack_success && ack->cb)
-        ack->cb(0, NULL, ack->cbarg);
+        ack->cb(0, pmain, ack->cbarg);
 
     prot_ack_ed25519_free(ack);
 }

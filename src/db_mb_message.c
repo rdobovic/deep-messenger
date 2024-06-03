@@ -8,6 +8,7 @@
 #include <db_mb_account.h>
 #include <db_mb_message.h>
 #include <constants.h>
+#include <debug.h>
 
 // Create new empty mailbox message object
 struct db_mb_message * db_mb_message_new(void) {
@@ -117,7 +118,7 @@ static struct db_mb_message * db_mb_message_process_row(
     sqlite3 *db, sqlite3_stmt *stmt, struct db_mb_message *dest
 ) {
     int rc;
-    struct db_mb_message *msg;
+    struct db_mb_message *msg = dest;
 
     // Check if there are no results or an error occurred
     if ((rc = sqlite3_step(stmt)) != SQLITE_ROW) {
@@ -191,6 +192,8 @@ struct db_mb_message ** db_mb_message_get_all(sqlite3 *db, struct db_mb_account 
     sqlite3_stmt *stmt;
     struct db_mb_message **msgs;
 
+    debug("Get all start");
+
     const char sql[] = 
         "SELECT * FROM mailbox_messages WHERE account_id = ?";
     const char sql_count[] =
@@ -207,6 +210,7 @@ struct db_mb_message ** db_mb_message_get_all(sqlite3 *db, struct db_mb_account 
 
     *n = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
+    debug("Get all got cnt");
 
     if (*n == 0) return NULL;
 
@@ -219,11 +223,16 @@ struct db_mb_message ** db_mb_message_get_all(sqlite3 *db, struct db_mb_account 
     msgs = safe_malloc((sizeof(struct db_mb_message *) * (*n)),
         "Failed to allocate memory for mailbox message list");
 
+    debug("Before process row");
+
     for (i = 0; i < *n; i++) {
         msgs[i] = db_mb_message_process_row(db, stmt, NULL);
     }
 
+    debug("After process row");
+
     sqlite3_finalize(stmt);
+    debug("Get all end");
     return msgs;
 }
 
