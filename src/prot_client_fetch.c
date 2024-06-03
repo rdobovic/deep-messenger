@@ -23,6 +23,8 @@ static void tran_done(struct prot_main *pmain, struct prot_tran_handler *phand) 
 // Called to free fetch request memory
 static void tran_cleanup(struct prot_main *pmain, struct prot_tran_handler *phand) {
     struct prot_client_fetch *msg = phand->msg;
+    if (!phand->success)
+        hook_list_call(pmain->hooks, PROT_CLIENT_FETCH_EV_FAIL, NULL);
     debug("PCF Cleanup called");
     prot_client_fetch_free(msg);
 }

@@ -150,4 +150,7 @@ void app_update_contacts(struct app_data *app);
 // Add hooks to main protocol handler for incomming connection (app_actions.c)
 void app_pmain_add_hooks(struct app_data *app, struct prot_main *pmain);
 
+// Sync messages with given contact
+void app_contact_sync(struct app_data *app, struct db_contact *cont);
+
 #endif

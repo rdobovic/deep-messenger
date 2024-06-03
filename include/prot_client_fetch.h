@@ -5,6 +5,12 @@
 #include <prot_main.h>
 #include <db_contact.h>
 
+enum prot_client_fetch_events {
+    PROT_CLIENT_FETCH_EV_OK        = 0x8B01,
+    PROT_CLIENT_FETCH_EV_FAIL      = 0x8B02,
+    PROT_CLIENT_FETCH_EV_INCOMMING = 0x8B03,
+};
+
 struct prot_client_fetch {
     sqlite3 *db;
     struct db_contact *cont;

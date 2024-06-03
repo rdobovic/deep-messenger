@@ -404,6 +404,25 @@ static void command_mbcontacts(int argc, char **argv, void *cbarg) {
     prot_main_connect(pmain, mb_address, app->cf.mailbox_port, "127.0.0.1", app->cf.tor_port);
 }
 
+// Upload contact list to the mailbox server
+static void command_sync(int argc, char **argv, void *cbarg) {
+    struct app_data *app = cbarg;
+    struct db_contact *cont;
+
+    if (!onion_address_valid(argv[1])) {
+        app_ui_shell(app, "error: Invalid client onion address provided");
+        return;
+    }
+
+    if (!(cont = db_contact_get_by_onion(app->db, argv[1], NULL))) {
+        app_ui_shell(app, "error: Cannot find given friend in the database");
+        return;
+    }
+
+    app_ui_shell(app, "Attempting message sync in the background");
+    app_contact_sync(app, cont);
+}
+
 // Handle config shell commands
 void app_ui_handle_cmd(struct ui_prompt *prt, void *att) {
     const char *err;
@@ -421,11 +440,12 @@ void app_ui_handle_cmd(struct ui_prompt *prt, void *att) {
         {"friends",    0, command_friends,    app},
         {"friendrm",   1, command_friendrm,   app},
         {"mbcontacts", 0, command_mbcontacts, app},
+        {"sync",       1, command_sync,       app},
     };
 
     app_ui_shell(app, "> %ls", prt->input_buffer);
 
-    if (err = cmd_parse(cmds, 10, ui_prompt_get_input(prt))) {
+    if (err = cmd_parse(cmds, 11, ui_prompt_get_input(prt))) {
         app_ui_shell(app, "error: %s", err);
     }
     ui_prompt_clear(prt);

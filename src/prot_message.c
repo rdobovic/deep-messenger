@@ -21,7 +21,19 @@ static void ack_received(int ack_success, struct prot_main *pmain, void *arg) {
     struct prot_message *msg = arg;
 
     if (ack_success) {
-        db_message_save(msg->db, msg->client_msg);
+        // If this is RECV message set it's message to CONFIRMED
+        if (msg->client_msg->type == DB_MESSAGE_RECV) {
+            struct db_message *to_conf;
+
+            to_conf = db_message_get_by_gid(msg->db, msg->client_msg->body_recv_id, NULL);
+            if (to_conf) {
+                to_conf->status = DB_MESSAGE_STATUS_RECV_CONFIRMED;
+                db_message_save(msg->db, to_conf);
+                db_message_free(to_conf);
+            }
+        } else {
+            db_message_save(msg->db, msg->client_msg);
+        }
     }
 
     hook_list_call(pmain->hooks,
