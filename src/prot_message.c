@@ -250,7 +250,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
                 db_message_set_text(msg->client_msg, plain_data, plain_len);
                 break;
             case DB_MESSAGE_NICK:
-                if (plain_len > CLIENT_NICK_MAX_LEN) {
+                if (plain_len >= CLIENT_NICK_MAX_LEN) {
                     prot_main_set_error(pmain, PROT_ERR_INVALID_MSG);
                     goto cl_err;
                 }
@@ -260,6 +260,7 @@ static void recv_handle(struct prot_main *pmain, struct prot_recv_handler *phand
 
                 memcpy(msg->client_cont->nickname, plain_data, plain_len);
                 msg->client_cont->nickname_len = plain_len;
+                msg->client_cont->nickname[plain_len] = '\0';
                 break;
             case DB_MESSAGE_MBOX:
                 if (plain_len < MAILBOX_ID_LEN + ONION_ADDRESS_LEN) {

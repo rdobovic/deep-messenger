@@ -10,6 +10,7 @@
 #include <base32.h>
 
 #include <prot_main.h>
+#include <db_message.h>
 #include <prot_transaction.h>
 #include <prot_mb_account.h>
 #include <prot_friend_req.h>
@@ -69,6 +70,7 @@ static void command_info(int argc, char **argv, void *cbarg) {
 
 // Handle account registration status on pmain
 static void command_mbreg_hook_cb(int ev, void *data, void *cbarg) {
+    int i;
     struct app_data *app = cbarg;
     struct prot_mb_acc_data *acc = data;
 
@@ -83,6 +85,25 @@ static void command_mbreg_hook_cb(int ev, void *data, void *cbarg) {
     db_options_set_text(app->db, "client_mailbox_onion_address", acc->onion_address, ONION_ADDRESS_LEN);
 
     app_ui_shell(app, "Successfully registered the mailbox server");
+
+    for (i = 0; i < app->n_contacts; i++) {
+        struct db_message *msg;
+
+        if (app->contacts[i]->deleted || app->contacts[i]->status != DB_CONTACT_ACTIVE)
+            continue;
+
+        msg = db_message_new();
+        msg->type = DB_MESSAGE_MBOX;
+        msg->contact_id = app->contacts[i]->id;
+        msg->sender = DB_MESSAGE_SENDER_ME;
+        msg->status = DB_MESSAGE_STATUS_UNDELIVERED;
+        db_message_gen_id(msg);
+
+        memcpy(msg->body_mbox_id, acc->mailbox_id, MAILBOX_ID_LEN);
+        memcpy(msg->body_mbox_onion, acc->onion_address, ONION_ADDRESS_LEN);
+        db_message_save(app->db, msg);
+        app_message_send(app, msg);
+    }
 }
 
 // Attempt to register mailbox account
@@ -464,6 +485,42 @@ static void command_tor(int argc, char **argv, void *cbarg) {
     app_tor_start(app);
 }
 
+// Upload contact list
+static void command_nickname(int argc, char **argv, void *cbarg) {
+    int i;
+    size_t len;
+    struct app_data *app = cbarg;
+    
+    len = strlen(argv[1]);
+    if (len < 4 || len >= CLIENT_NICK_MAX_LEN) {
+        app_ui_shell(app, "error: Nickname length must be between 4 and %d characters",
+            CLIENT_NICK_MAX_LEN - 1);
+        return;
+    }
+
+    for (i = 0; i < app->n_contacts; i++) {
+        struct db_message *msg;
+
+        if (app->contacts[i]->deleted || app->contacts[i]->status != DB_CONTACT_ACTIVE)
+            continue;
+
+        msg = db_message_new();
+        msg->type = DB_MESSAGE_NICK;
+        msg->contact_id = app->contacts[i]->id;
+        msg->sender = DB_MESSAGE_SENDER_ME;
+        msg->status = DB_MESSAGE_STATUS_UNDELIVERED;
+        db_message_gen_id(msg);
+
+        msg->body_nick_len = len;
+        strncpy(msg->body_nick, argv[1], CLIENT_NICK_MAX_LEN);
+        db_message_save(app->db, msg);
+        app_message_send(app, msg);
+    }
+
+    db_options_set_text(app->db, "client_nickname", argv[1], len);
+    app_ui_shell(app, "Setting yout nickname to [%s]", argv[1]);
+}
+
 // Handle config shell commands
 void app_ui_handle_cmd(struct ui_prompt *prt, void *att) {
     const char *err;
@@ -485,11 +542,12 @@ void app_ui_handle_cmd(struct ui_prompt *prt, void *att) {
         {"mbdirect",   1, command_mbdirect,   app},
         {"mbsync",     0, command_mbsync,     app},
         {"tor",        0, command_tor,        app},
+        {"nickname",   1, command_nickname,   app},
     };
 
     app_ui_shell(app, "> %ls", prt->input_buffer);
 
-    if (err = cmd_parse(cmds, 14, ui_prompt_get_input(prt))) {
+    if (err = cmd_parse(cmds, 15, ui_prompt_get_input(prt))) {
         app_ui_shell(app, "error: %s", err);
     }
     ui_prompt_clear(prt);

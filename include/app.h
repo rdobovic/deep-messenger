@@ -15,6 +15,7 @@
 #include <ui_window.h>
 #include <ui_manager.h>
 #include <prot_main.h>
+#include <db_message.h>
 
 // Log message to info UI window
 #define app_ui_info(app, ...) \
@@ -157,5 +158,11 @@ void app_contact_sync(struct app_data *app, struct db_contact *cont);
 
 // Sync messages from your mailbox account
 void app_mailbox_sync(struct app_data *app);
+
+// Send message to associated contact (frees message by itself)
+void app_message_send(struct app_data *app, struct db_message *dbmsg);
+
+// Try to send message to the contact mailbox (makes a copy of provided message)
+void app_message_send_mb(struct app_data *app, const struct db_message *msg);
 
 #endif

@@ -52,8 +52,9 @@ static void hook_message(int ev, void *data, void *cbarg) {
         app_ui_info(app, "[Message] You have new message from [%s]", cont->nickname);
     }
     if (msg->type == DB_MESSAGE_NICK) {
-        app_ui_info(app, "[Message] Your friend [%s] changed their nickname, refreshing UI", cont->nickname);
         app_update_contacts(app);
+        ui_stack_redraw(app->ui.stack);
+        app_ui_info(app, "[Message] Your friend [%s] changed their nickname, refreshing UI", cont->nickname);
     }
 
     debug("GOT NEW MESSAGE => FINISHED PROCESSING");
@@ -112,6 +113,7 @@ static void hook_contact_sync(int ev, void *data, void *cbarg) {
     }
     if (ref_contacts) {
         app_update_contacts(app);
+        ui_stack_redraw(app->ui.stack);
         app_ui_info(app, "[Message] Your friend [%s] changed their nickname, refreshing UI", cont->nickname);
     }
     db_contact_free(cont);
