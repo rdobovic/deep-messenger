@@ -24,8 +24,7 @@ static void command_help(int argc, char **argv, void *cbarg) {
 
     app_ui_shell(app, "List of all available commands:");
     app_ui_shell(app, "  help                Prints this help message");
-    app_ui_shell(app, "  mailboxfetch        Fetch new messages from mailbox server");
-    app_ui_shell(app, "  fetch <onion>       Fetch new messages from given client");
+    app_ui_shell(app, "  sync <onion>        Fetch new messages from given client");
     app_ui_shell(app, "  friends             List all friends");
     app_ui_shell(app, "  friendadd <onion>   Send friend request to add a new friend");
     app_ui_shell(app, "  friendrm <onion>    Remove given friend");
@@ -33,7 +32,13 @@ static void command_help(int argc, char **argv, void *cbarg) {
     app_ui_shell(app, "  nickname <nick>     Change your nickname to <nick>");
     app_ui_shell(app, "  mbreg <onion> <key> Register to given mailbox server");
     app_ui_shell(app, "  mbrm                Delete account on your current mailbox server");
+    app_ui_shell(app, "  mbrmlocal           Remove mailbox account locally");
+    app_ui_shell(app, "  mbcontacts          Upload contact list to mailbox server");
+    app_ui_shell(app, "  mbsync              Fetch new messages from mailbox server");
+    app_ui_shell(app, "  mbdirect <1/0>      Send messages only over mailbox (debug tool)");
+    app_ui_shell(app, "  tor                 Start tor client (manual mode)");
     app_ui_shell(app, "  version             Prints app and protocol version");
+    
 }
 
 // Print application version to the console
