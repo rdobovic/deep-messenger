@@ -3,6 +3,7 @@
 #include <prot_friend_req.h>
 #include <db_contact.h>
 #include <db_message.h>
+#include <db_options.h>
 #include <prot_message.h>
 #include <prot_message_list.h>
 #include <prot_client_fetch.h>
@@ -206,6 +207,9 @@ void app_mailbox_sync(struct app_data *app) {
     struct prot_main *pmain;
     struct prot_txn_req *treq;
     struct prot_mb_fetch *mbfet;
+
+    if (!db_options_is_defined(app->db, "mailbox_onion_address", DB_OPTIONS_TEXT))
+        return;
 
     pmain = prot_main_new(app->base, app->db);
     treq = prot_txn_req_new();
