@@ -14,3 +14,5 @@ Other options may be added as needed in the future.
 | client_mailbox_onion_address | Text |
 | client_mailbox_sig_pub_key   | Bin  |
 | client_mailbox_sig_priv_key  | Bin  |
+
+**I am not sure if this is up to date...**

@@ -1,0 +1,15 @@
+BOOKS
+
+-- LibEvent Book --------------------------------------------------------
+
+https://libevent.org/libevent-book/
+
+I compiled book from the source so I can print it:
+https://github.com/libevent/libevent-book
+
+However, I had to fix some parts and change some headers
+https://github.com/rdobovic/libevent-book (my repo fork)
+
+-- Beej's Guide to Network Programming ----------------------------------
+
+https://beej.us/guide/bgnet/

@@ -1,0 +1,37 @@
+OTHER RESOURCES
+
+-- Queue implementation (used as inspiration) ---------------------------
+
+https://github.com/kostakis/Generic-Queue
+
+-- Circular queues ------------------------------------------------------
+
+https://www.programiz.com/dsa/circular-queue
+
+-- base32 decodeing/encodeing -------------------------------------------
+
+https://datatracker.ietf.org/doc/html/rfc4648#section-6
+https://github.com/mjg59/tpmtotp/blob/master/base32.c
+https://github.com/mjg59/tpmtotp/blob/master/base32.h
+
+-- TOR ------------------------------------------------------------------
+
+https://spec.torproject.org
+
+-- TOR onion address ----------------------------------------------------
+
+https://spec.torproject.org/rend-spec/encoding-onion-addresses.html
+https://spec.torproject.org/rend-spec/overview.html#cryptography
+
+-- TOR private key file -------------------------------------------------
+
+https://tor.stackexchange.com/questions/23965/how-to-get-the-hostname-from-hs-ed25519-secret-key
+
+-- Is hashing then signing secure? --------------------------------------
+
+https://crypto.stackexchange.com/questions/27277/more-efficient-and-just-as-secure-to-sign-message-hash-using-ed25519
+
+-- opepen() implementation ----------------------------------------------
+
+https://stackoverflow.com/questions/548063/kill-a-process-started-with-popen
+

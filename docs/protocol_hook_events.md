@@ -27,3 +27,5 @@ Managed to successfully update contacts list on the mailbox server
 PROT_MB_SET_CONTACTS_EV_FAIL
 Failed to update contacts list on the mailbox server
 ```
+
+**I am not sure if this is up to date...**

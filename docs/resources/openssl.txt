@@ -1,0 +1,89 @@
+OPENSSL STUFF
+
+-- Random ---------------------------------------------------------------
+
+libcrypto in general
+https://www.openssl.org/docs/man3.0/man7/crypto.html
+
+evp API in general
+https://www.openssl.org/docs/man3.0/man7/evp.html
+
+EVP_aes_256_cbc()
+https://www.openssl.org/docs/man3.0/man3/EVP_aes_256_cbc.html
+
+EVP_sha512
+https://www.openssl.org/docs/manmaster/man3/EVP_sha512.html
+
+-- Seal/Open letter -----------------------------------------------------
+
+EVP_SealInit
+https://www.openssl.org/docs/manmaster/man3/EVP_SealInit.html
+
+EVP_SealFinal (aka EVP_EncryptFinal)
+EVP_SealUpdate (aka EVP_EncryptUpdate)
+https://www.openssl.org/docs/manmaster/man3/EVP_EncryptInit.html
+
+EVP_OpenInit
+https://www.openssl.org/docs/man3.0/man3/EVP_OpenInit.html
+
+EVP_OpenFinal (aka EVP_DecryptFinal)
+EVP_OpenUpdate (aka EVP_DecryptUpdate)
+https://www.openssl.org/docs/man3.0/man3/EVP_EncryptInit.html
+
+-- Generate RSA keypair -------------------------------------------------
+
+EVP_RSA_gen
+https://www.openssl.org/docs/manmaster/man3/RSA_generate_key_ex.html
+
+-- Encode/Decode DER/PAM ------------------------------------------------
+
+OSSL_ENCODER_CTX_new_for_pkey
+https://www.openssl.org/docs/man3.0/man3/OSSL_ENCODER_CTX_new_for_pkey.html
+
+OSSL_ENCODER_CTX
+https://www.openssl.org/docs/manmaster/man3/OSSL_ENCODER_CTX.html
+
+OSSL_ENCODER_to_data
+https://www.openssl.org/docs/manmaster/man3/OSSL_ENCODER_to_bio.html
+
+[int selection] attribute in both decoder and encoder values
+https://www.openssl.org/docs/man3.0/man3/EVP_PKEY_fromdata.html#Selections
+
+OSSL_DECODER_CTX_new_for_pkey
+https://www.openssl.org/docs/manmaster/man3/OSSL_DECODER_CTX_new_for_pkey.html
+
+OSSL_DECODER_CTX
+https://www.openssl.org/docs/manmaster/man3/OSSL_DECODER_CTX.html
+
+OSSL_DECODER_from_data
+https://www.openssl.org/docs/manmaster/man3/OSSL_DECODER_from_bio.html
+
+-- Generate ED25519 keypair ---------------------------------------------
+
+EVP_PKEY_keygen
+https://www.openssl.org/docs/man3.0/man3/EVP_PKEY_Q_keygen.html
+
+EVP_PKEY_CTX_new
+EVP_PKEY_CTX_new_id
+https://www.openssl.org/docs/man3.0/man3/EVP_PKEY_CTX_new.html
+
+EVP_PKEY
+https://www.openssl.org/docs/man3.0/man3/EVP_PKEY.html
+
+-- ED25519 signing/verifying --------------------------------------------
+
+EVP_DigestSign*
+https://www.openssl.org/docs/man3.0/man3/EVP_DigestSignInit.html
+
+EVP_DigestVerify*
+https://www.openssl.org/docs/man3.0/man3/EVP_DigestVerifyInit.html
+
+-- Random bytes gen -----------------------------------------------------
+
+https://www.openssl.org/docs/manmaster/man3/RAND_bytes.html
+
+-- SHA_3_256 hashing ----------------------------------------------------
+
+https://www.openssl.org/docs/manmaster/man3/EVP_sha3_256.html
+https://www.openssl.org/docs/manmaster/man3/EVP_MD_CTX_new.html
+https://www.openssl.org/docs/man3.0/man3/EVP_DigestInit_ex.html

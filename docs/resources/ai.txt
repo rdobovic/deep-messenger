@@ -1,0 +1,8 @@
+AI TOOLS
+
+-- ChatGPT --------------------------------------------------------------
+
+https://chatgpt.com/
+
+I used ChatGPT 3.5, it was not very useful for design related questions,
+however it helped me spot some bugs I missed
