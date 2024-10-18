@@ -47,7 +47,11 @@ This app is not production ready, you are free to use it as you wish, but I don'
 
 Also, since this app is my gratuation project I had to finish it quickly, so codebase is prone to change in the future.
 
-## Building
+After some testing peer-to-peer messages seem to work fine, mailboxes on the other side, should work, but as you can see on the todo list below mailbox messages are not fully implemented. Since there is no way to remove messages from the mailbox they will accumulate in the mailbox. This issue will be fixed in the future.
+
+Currently I am still considering is it worth it to try fixing current codebase, in the future I will probably split messenger library from the UI. I also need to rewrite some parts of the app and probably fix many issues I encounter along the way.
+
+## Installation
 
 Deep Messenger can be built using gnu make (gcc) by running make command.
 
@@ -66,7 +70,8 @@ ncurses  => libncurses-dev (libncursesw6 - wide character support)
 openssl  => libssl-dev (libcrypto)
 ```
 
-So to run Deep Messenger on debian distro use following:
+On Debian GNU/Linux you can run the following set of commands to install dependencies, build and run the app.
+
 ```bash
 # Install dependencies
 su -
@@ -94,7 +99,7 @@ build/deep-messenger
 - [X] Design some kind of notification mechanism (hooks)
 - [X] Write official project documentation
 - [X] Connect backend and frontend together
-- [ ] Test the whole application
+- [ ] Test the whole application (Kinda done)
 
 ## Fully implemented message types
 
@@ -115,7 +120,7 @@ build/deep-messenger
 
 ## Running tests
 
-Tests are not actual unit tests, they are just files with separate main functions used to test each part of the application. Tests are not guaranteed to work, you will probably need to change something in the test files to make them work for you.
+Tests are not actual unit tests, they are just files with separate main functions used to test each part of the application. Tests are not guaranteed to work, you will probably need to change something in the test files to make them work for you. This tests will be reimplemented using unit testing library in the future.
 
 To see the list of all available tests run
 
@@ -126,5 +131,5 @@ make test.ls
 To compile and run one of the given tests type
 
 ```bash
-make tets.run.test_name
+make test.run.test_name
 ```
