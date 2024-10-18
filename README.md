@@ -62,8 +62,25 @@ Name        Debian package
 ----------------------------------------------------
 libevent => libevent-dev
 sqlite3  => libsqlite3-dev
-ncurses  => libncursesw6 (wide character support)
+ncurses  => libncurses-dev (libncursesw6 - wide character support)
 openssl  => libssl-dev (libcrypto)
+```
+
+So to run Deep Messenger on debian distro use following:
+```bash
+# Install dependencies
+su -
+apt update
+apt install -y build-essential libevent-dev libsqlite3-dev libssl-dev git libncurses-dev tor
+exit
+
+# Get code and build
+git clone https://github.com/rdobovic/deep-messenger.git
+cd deep-messenger
+make
+
+# Run the messenger
+build/deep-messenger
 ```
 
 ## Project tasks
